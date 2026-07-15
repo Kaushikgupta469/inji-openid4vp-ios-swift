@@ -23,22 +23,47 @@ jobs:
         run: swift build 2>&1 | tail -40
 
       - name: Run tests with coverage
-        run: swift test --enable-code-coverage 2>&1 | tail -60
+        run: swift test --enable-code-coverage 2>&1 | tail -40
 
-      - name: Coverage summary
+      - name: Locate coverage artifacts
+        if: always()
+        run: |
+          BIN_PATH="$(swift build --show-bin-path)"
+          echo "BIN_PATH=${BIN_PATH}" | tee -a "$GITHUB_ENV"
+          echo "--- contents of bin path ---"
+          ls -la "${BIN_PATH}" || true
+          echo "--- codecov dir ---"
+          ls -la "${BIN_PATH}/codecov" || true
+          echo "--- xctest bundles ---"
+          find "${BIN_PATH}" -maxdepth 1 -name '*.xctest' || true
+
+      - name: Coverage report
         if: always()
         run: |
           BIN_PATH="$(swift build --show-bin-path)"
           PROFDATA="${BIN_PATH}/codecov/default.profdata"
-          XCTEST_BUNDLE="$(find "${BIN_PATH}" -name '*.xctest' -maxdepth 1 | head -1)"
+          XCTEST_BUNDLE="$(find "${BIN_PATH}" -maxdepth 1 -name '*.xctest' | head -1)"
+
+          if [ -z "${XCTEST_BUNDLE}" ]; then
+            echo "no .xctest bundle found under ${BIN_PATH}"
+            exit 1
+          fi
+
           BUNDLE_NAME="$(basename "${XCTEST_BUNDLE}" .xctest)"
           BINARY="${XCTEST_BUNDLE}/Contents/MacOS/${BUNDLE_NAME}"
+          if [ ! -f "${BINARY}" ]; then
+            BINARY="${XCTEST_BUNDLE}/${BUNDLE_NAME}"
+          fi
+
+          echo "binary  = ${BINARY}"
+          echo "profdata= ${PROFDATA}"
+          ls -la "${BINARY}"
+          ls -la "${PROFDATA}"
 
           echo "=== PER-FILE COVERAGE (Sources only) ==="
           xcrun llvm-cov report "${BINARY}" \
             -instr-profile "${PROFDATA}" \
-            -ignore-filename-regex='(\.build|Tests)/' \
-            2>&1 | tail -60
+            -ignore-filename-regex='(\.build|Tests)/'
 
           echo "=== LCOV EXPORT ==="
           xcrun llvm-cov export "${BINARY}" \
