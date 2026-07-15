@@ -5,18 +5,18 @@ private struct SampleCause: Error {}
 
 final class OpenId4VPExceptionsTests: XCTestCase {
 
-    private let className = "TestClass"
+    private let testClassName = "TestClass"
 
     func testBaseExceptionExposesProvidedValues() {
         let exception = OpenID4VPException(
             errorCode: "custom_code",
             message: "something went wrong",
-            className: className
+            className: testClassName
         )
 
         XCTAssertEqual(exception.errorCode, "custom_code")
         XCTAssertEqual(exception.message, "something went wrong")
-        XCTAssertEqual(exception.className, className)
+        XCTAssertEqual(exception.className, testClassName)
         XCTAssertNil(exception.cause)
         XCTAssertTrue(exception.notifyVerifier)
         XCTAssertNil(exception.verifierResponse)
@@ -28,7 +28,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
             errorCode: "custom_code",
             message: "wrapped",
             cause: cause,
-            className: className
+            className: testClassName
         )
 
         XCTAssertTrue(exception.cause is SampleCause)
@@ -38,7 +38,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
         let exception = OpenID4VPException(
             errorCode: "custom_code",
             message: "quiet",
-            className: className,
+            className: testClassName,
             notifyVerifier: false
         )
 
@@ -49,7 +49,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
         let exception = OpenID4VPException(
             errorCode: "invalid_request",
             message: "bad input",
-            className: className
+            className: testClassName
         )
 
         XCTAssertEqual(exception.description, "invalid_request : bad input")
@@ -59,7 +59,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
         let exception = OpenID4VPException(
             errorCode: "invalid_request",
             message: "bad input",
-            className: className
+            className: testClassName
         )
 
         XCTAssertEqual(exception.errorDescription, "bad input")
@@ -69,7 +69,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
         let exception = OpenID4VPException(
             errorCode: "invalid_client",
             message: "unknown verifier",
-            className: className
+            className: testClassName
         )
 
         XCTAssertEqual(
@@ -82,7 +82,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
         let exception = OpenID4VPException(
             errorCode: "invalid_request",
             message: "bad input",
-            className: className
+            className: testClassName
         )
 
         let response = exception.toAuthorizationErrorResponse(state: "state-1")
@@ -96,7 +96,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
         let exception = OpenID4VPException(
             errorCode: "invalid_request",
             message: "bad input",
-            className: className
+            className: testClassName
         )
 
         let response = exception.toAuthorizationErrorResponse(state: nil)
@@ -108,7 +108,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
         let exception = OpenID4VPException(
             errorCode: "invalid_request",
             message: "bad input",
-            className: className
+            className: testClassName
         )
         let verifierResponse = VerifierResponse(statusCode: 200, headers: [:])
 
@@ -118,7 +118,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
     }
 
     func testGetLogTagIncludesClassNameAndTraceabilityId() {
-        OpenID4VPException.setTraceabilityId(className: className, traceabilityId: "trace-123")
+        OpenID4VPException.setTraceabilityId(className: testClassName, traceabilityId: "trace-123")
 
         let logTag = OpenID4VPException.getLogTag("SomeClass")
 
@@ -129,26 +129,26 @@ final class OpenId4VPExceptionsTests: XCTestCase {
 
     func testStaticLoggingHelpersDoNotCrash() {
         OpenID4VPException.error("tag", SampleCause())
-        OpenID4VPException.warn("careful", className: className)
-        OpenID4VPException.error(SampleCause(), className: className)
+        OpenID4VPException.warn("careful", className: testClassName)
+        OpenID4VPException.error(SampleCause(), className: testClassName)
     }
 
     func testInvalidQueryParamsUsesInvalidRequest() {
-        let exception = InvalidQueryParams(message: "missing param", className: className)
+        let exception = InvalidQueryParams(message: "missing param", className: testClassName)
 
         XCTAssertEqual(exception.errorCode, OpenID4VPErrorCodes.invalidRequest)
         XCTAssertEqual(exception.message, "missing param")
     }
 
     func testInvalidVerifierUsesInvalidClient() {
-        let exception = InvalidVerifier(message: "unknown verifier", className: className)
+        let exception = InvalidVerifier(message: "unknown verifier", className: testClassName)
 
         XCTAssertEqual(exception.errorCode, OpenID4VPErrorCodes.invalidClient)
         XCTAssertEqual(exception.message, "unknown verifier")
     }
 
     func testInvalidInputPatternJoinsPathComponents() {
-        let exception = InvalidInputPattern(fieldPath: ["a", "b", "c"], className: className)
+        let exception = InvalidInputPattern(fieldPath: ["a", "b", "c"], className: testClassName)
 
         XCTAssertEqual(
             exception.message,
@@ -158,7 +158,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
     }
 
     func testInvalidInputPatternInterpolatesNonArrayPath() {
-        let exception = InvalidInputPattern(fieldPath: "client_id", className: className)
+        let exception = InvalidInputPattern(fieldPath: "client_id", className: testClassName)
 
         XCTAssertEqual(
             exception.message,
@@ -170,7 +170,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
         let exception = JsonEncodingFailed(
             fieldPath: "vp_token",
             errorMessage: "bad json",
-            className: className
+            className: testClassName
         )
 
         XCTAssertEqual(
@@ -181,7 +181,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
     }
 
     func testJsonEncodingFailedRendersNilFieldAsEmpty() {
-        let exception = JsonEncodingFailed(errorMessage: "bad json", className: className)
+        let exception = JsonEncodingFailed(errorMessage: "bad json", className: testClassName)
 
         XCTAssertEqual(exception.message, "Json encoding failed for  due to this error: bad json")
     }
@@ -191,7 +191,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
             fieldPath: "nonce",
             errorMessage: "utf8 failure",
             errorCode: "server_error",
-            className: className
+            className: testClassName
         )
 
         XCTAssertEqual(exception.errorCode, "server_error")
@@ -205,7 +205,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
         let exception = DeserializationFailure(
             fieldPath: "presentation_definition",
             errorMessage: "unexpected token",
-            className: className
+            className: testClassName
         )
 
         XCTAssertEqual(
@@ -215,7 +215,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
     }
 
     func testInvalidLimitDisclosureHasFixedMessage() {
-        let exception = InvalidLimitDisclosure(className: className)
+        let exception = InvalidLimitDisclosure(className: testClassName)
 
         XCTAssertEqual(
             exception.message,
@@ -225,27 +225,27 @@ final class OpenId4VPExceptionsTests: XCTestCase {
     }
 
     func testInvalidDataDefaultsToInvalidRequest() {
-        let exception = InvalidData(message: "bad data", className: className)
+        let exception = InvalidData(message: "bad data", className: testClassName)
 
         XCTAssertEqual(exception.errorCode, OpenID4VPErrorCodes.invalidRequest)
         XCTAssertEqual(exception.message, "bad data")
     }
 
     func testInvalidDataHonoursExplicitCode() {
-        let exception = InvalidData(message: "bad data", className: className, code: "access_denied")
+        let exception = InvalidData(message: "bad data", className: testClassName, code: "access_denied")
 
         XCTAssertEqual(exception.errorCode, "access_denied")
     }
 
     func testMissingInputFormatsStringField() {
-        let exception = MissingInput(fieldPath: "client_id", className: className)
+        let exception = MissingInput(fieldPath: "client_id", className: testClassName)
 
         XCTAssertEqual(exception.message, "Missing Input: client_id param is required")
         XCTAssertEqual(exception.errorCode, OpenID4VPErrorCodes.invalidRequest)
     }
 
     func testMissingInputJoinsArrayField() {
-        let exception = MissingInput(fieldPath: ["a", "b"], className: className)
+        let exception = MissingInput(fieldPath: ["a", "b"], className: testClassName)
 
         XCTAssertEqual(exception.message, "Missing Input: a->b param is required")
     }
@@ -254,7 +254,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
         let exception = MissingInput(
             fieldPath: "",
             message: "fallback message",
-            className: className
+            className: testClassName
         )
 
         XCTAssertEqual(exception.message, "fallback message")
@@ -264,7 +264,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
         let exception = MissingInput(
             fieldPath: [String](),
             message: "fallback message",
-            className: className
+            className: testClassName
         )
 
         XCTAssertEqual(exception.message, "fallback message")
@@ -273,7 +273,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
     func testMissingInputHonoursNotifyVerifierFalse() {
         let exception = MissingInput(
             fieldPath: "client_id",
-            className: className,
+            className: testClassName,
             notifyVerifier: false
         )
 
@@ -281,37 +281,37 @@ final class OpenId4VPExceptionsTests: XCTestCase {
     }
 
     func testInvalidInputReportsEmptyValue() {
-        let exception = InvalidInput(fieldPath: "client_id", value: "", className: className)
+        let exception = InvalidInput(fieldPath: "client_id", value: "", className: testClassName)
 
         XCTAssertEqual(exception.message, "Invalid Input: client_id value cannot be empty or null")
     }
 
     func testInvalidInputTreatsWhitespaceValueAsEmpty() {
-        let exception = InvalidInput(fieldPath: "client_id", value: "   ", className: className)
+        let exception = InvalidInput(fieldPath: "client_id", value: "   ", className: testClassName)
 
         XCTAssertEqual(exception.message, "Invalid Input: client_id value cannot be empty or null")
     }
 
     func testInvalidInputReportsNilValue() {
-        let exception = InvalidInput(fieldPath: "client_id", value: nil, className: className)
+        let exception = InvalidInput(fieldPath: "client_id", value: nil, className: testClassName)
 
         XCTAssertEqual(exception.message, "Invalid Input: client_id value cannot be empty or null")
     }
 
     func testInvalidInputReportsBooleanValue() {
-        let exception = InvalidInput(fieldPath: "flag", value: true, className: className)
+        let exception = InvalidInput(fieldPath: "flag", value: true, className: testClassName)
 
         XCTAssertEqual(exception.message, "Invalid Input: flag value must be either true or false")
     }
 
     func testInvalidInputReportsGenericInvalidValue() {
-        let exception = InvalidInput(fieldPath: "count", value: 42, className: className)
+        let exception = InvalidInput(fieldPath: "count", value: 42, className: testClassName)
 
         XCTAssertEqual(exception.message, "Invalid Input: count value is invalid")
     }
 
     func testInvalidInputJoinsArrayFieldPath() {
-        let exception = InvalidInput(fieldPath: ["a", "b"], value: 42, className: className)
+        let exception = InvalidInput(fieldPath: ["a", "b"], value: 42, className: testClassName)
 
         XCTAssertEqual(exception.message, "Invalid Input: a->b value is invalid")
     }
@@ -320,7 +320,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
         let exception = InvalidInput(
             fieldPath: "client_id",
             value: nil,
-            className: className,
+            className: testClassName,
             notifyVerifier: false
         )
 
@@ -328,7 +328,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
     }
 
     func testUnsupportedPublicKeyTypeListsSupportedTypes() {
-        let exception = UnsupportedPublicKeyType(className: className)
+        let exception = UnsupportedPublicKeyType(className: testClassName)
 
         XCTAssertEqual(
             exception.message,
@@ -337,13 +337,13 @@ final class OpenId4VPExceptionsTests: XCTestCase {
     }
 
     func testKidExtractionFailedHasFixedMessage() {
-        let exception = KidExtractionFailed(className: className)
+        let exception = KidExtractionFailed(className: testClassName)
 
         XCTAssertEqual(exception.message, "Kid extraction from did document failed")
     }
 
     func testPublicKeyResolutionFailedDefaultsToInvalidRequest() {
-        let exception = PublicKeyResolutionFailed(message: "no key", className: className)
+        let exception = PublicKeyResolutionFailed(message: "no key", className: testClassName)
 
         XCTAssertEqual(exception.errorCode, OpenID4VPErrorCodes.invalidRequest)
         XCTAssertEqual(exception.message, "no key")
@@ -352,7 +352,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
     func testPublicKeyResolutionFailedHonoursExplicitCode() {
         let exception = PublicKeyResolutionFailed(
             message: "no key",
-            className: className,
+            className: testClassName,
             code: "server_error"
         )
 
@@ -360,68 +360,68 @@ final class OpenId4VPExceptionsTests: XCTestCase {
     }
 
     func testInvalidSignatureHasFixedMessage() {
-        let exception = InvalidSignature(className: className)
+        let exception = InvalidSignature(className: testClassName)
 
         XCTAssertEqual(exception.message, "JWS proof verification failed")
     }
 
     func testVerificationFailurePassesMessageThrough() {
-        let exception = VerificationFailure(message: "not verified", className: className)
+        let exception = VerificationFailure(message: "not verified", className: testClassName)
 
         XCTAssertEqual(exception.message, "not verified")
     }
 
     func testJsonDecodingFailedPassesMessageThrough() {
-        let exception = JsonDecodingFailed(message: "bad payload", className: className)
+        let exception = JsonDecodingFailed(message: "bad payload", className: testClassName)
 
         XCTAssertEqual(exception.message, "bad payload")
     }
 
     func testJweEncryptionFailurePassesMessageThrough() {
-        let exception = JweEncryptionFailure(message: "encryption failed", className: className)
+        let exception = JweEncryptionFailure(message: "encryption failed", className: testClassName)
 
         XCTAssertEqual(exception.message, "encryption failed")
     }
 
     func testUnsupportedEncryptionAlgorithmHasFixedMessage() {
-        let exception = UnsupportedEncryptionAlgorithm(className: className)
+        let exception = UnsupportedEncryptionAlgorithm(className: testClassName)
 
         XCTAssertEqual(exception.message, "Required Encryption algorithm is not supported")
     }
 
     func testUnsupportedDidUrlHasFixedMessage() {
-        let exception = UnsupportedDidUrl(className: className)
+        let exception = UnsupportedDidUrl(className: testClassName)
 
         XCTAssertEqual(exception.message, "Given did url is not supported")
     }
 
     func testDidResolutionFailedPassesMessageThrough() {
-        let exception = DidResolutionFailed(message: "unreachable", className: className)
+        let exception = DidResolutionFailed(message: "unreachable", className: testClassName)
 
         XCTAssertEqual(exception.message, "unreachable")
     }
 
     func testPayloadConversionFailedHasFixedMessage() {
-        let exception = PayloadConversionFailed(className: className)
+        let exception = PayloadConversionFailed(className: testClassName)
 
         XCTAssertEqual(exception.message, "Failed to convert payload to Data")
     }
 
     func testInvalidResponseModePassesMessageThrough() {
-        let exception = InvalidResponseMode(message: "unsupported mode", className: className)
+        let exception = InvalidResponseMode(message: "unsupported mode", className: testClassName)
 
         XCTAssertEqual(exception.message, "unsupported mode")
     }
 
     func testGenericFailureDefaultsToServerError() {
-        let exception = GenericFailure(className: className)
+        let exception = GenericFailure(className: testClassName)
 
         XCTAssertEqual(exception.errorCode, OpenID4VPErrorCodes.serverError)
         XCTAssertEqual(exception.message, "Unknown error occurred ")
     }
 
     func testGenericFailureAppendsProvidedMessage() {
-        let exception = GenericFailure(message: "boom", className: className)
+        let exception = GenericFailure(message: "boom", className: testClassName)
 
         XCTAssertEqual(exception.message, "Unknown error occurred boom")
     }
@@ -430,20 +430,20 @@ final class OpenId4VPExceptionsTests: XCTestCase {
         let exception = GenericFailure(
             errorCode: "invalid_request",
             message: "boom",
-            className: className
+            className: testClassName
         )
 
         XCTAssertEqual(exception.errorCode, "invalid_request")
     }
 
     func testInvalidTypePassesMessageThrough() {
-        let exception = InvalidType(message: "wrong type", className: className)
+        let exception = InvalidType(message: "wrong type", className: testClassName)
 
         XCTAssertEqual(exception.message, "wrong type")
     }
 
     func testMismatchingClientIDInRequestHasFixedMessage() {
-        let exception = MismatchingClientIDInRequest(className: className)
+        let exception = MismatchingClientIDInRequest(className: testClassName)
 
         XCTAssertEqual(
             exception.message,
@@ -452,7 +452,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
     }
 
     func testMismatchingClientIdSchemeInRequestHasFixedMessage() {
-        let exception = MismatchingClientIdSchemeInRequest(className: className)
+        let exception = MismatchingClientIdSchemeInRequest(className: testClassName)
 
         XCTAssertEqual(
             exception.message,
@@ -461,82 +461,82 @@ final class OpenId4VPExceptionsTests: XCTestCase {
     }
 
     func testUnsupportedKeyExchangeAlgorithmHasFixedMessage() {
-        let exception = UnsupportedKeyExchangeAlgorithm(className: className)
+        let exception = UnsupportedKeyExchangeAlgorithm(className: testClassName)
 
         XCTAssertEqual(exception.message, "Required Key exchange algorithm is not supported")
     }
 
     func testKeyAgreementFailedPrefixesMessage() {
-        let exception = KeyAgreementFailed(message: "curve mismatch", className: className)
+        let exception = KeyAgreementFailed(message: "curve mismatch", className: testClassName)
 
         XCTAssertEqual(exception.message, "Key agreement failed. - curve mismatch")
     }
 
     func testPublicKeyConversionFailedUsesDefaultMessage() {
-        let exception = PublicKeyConversionFailed(className: className)
+        let exception = PublicKeyConversionFailed(className: testClassName)
 
         XCTAssertEqual(exception.message, "Public key Data conversion from base64 failed.")
     }
 
     func testPublicKeyConversionFailedHonoursCustomMessage() {
-        let exception = PublicKeyConversionFailed(message: "custom", className: className)
+        let exception = PublicKeyConversionFailed(message: "custom", className: testClassName)
 
         XCTAssertEqual(exception.message, "custom")
     }
 
     func testInvalidEncryptionKeySizeHasFixedMessage() {
-        let exception = InvalidEncryptionKeySize(className: className)
+        let exception = InvalidEncryptionKeySize(className: testClassName)
 
         XCTAssertEqual(exception.message, "Invalid Key size provided for encryption.")
     }
 
     func testUnsupportedHttpMethodUsesRequestUriMethodCode() {
-        let exception = UnsupportedHttpMethod(message: "PATCH", className: className)
+        let exception = UnsupportedHttpMethod(message: "PATCH", className: testClassName)
 
         XCTAssertEqual(exception.errorCode, OpenID4VPErrorCodes.invalidRequestUriMethod)
         XCTAssertEqual(exception.message, "Unsupported HTTP method: PATCH")
     }
 
     func testUnsupportedSignatureAlgorithmPassesMessageThrough() {
-        let exception = UnsupportedSignatureAlgorithm(message: "ES999", className: className)
+        let exception = UnsupportedSignatureAlgorithm(message: "ES999", className: testClassName)
 
         XCTAssertEqual(exception.message, "ES999")
     }
 
     func testBase64DecodingFailedPassesMessageThrough() {
-        let exception = Base64DecodingFailed(message: "not base64", className: className)
+        let exception = Base64DecodingFailed(message: "not base64", className: testClassName)
 
         XCTAssertEqual(exception.message, "not base64")
     }
 
     func testUnsupportedTypeDecodingPassesMessageThrough() {
-        let exception = UnsupportedTypeDecoding(message: "unknown type", className: className)
+        let exception = UnsupportedTypeDecoding(message: "unknown type", className: testClassName)
 
         XCTAssertEqual(exception.message, "unknown type")
     }
 
     func testUtf8EncodingFailedIncludesFieldPath() {
-        let exception = UTF8EncodingFailed(fieldPath: "nonce", className: className)
+        let exception = UTF8EncodingFailed(fieldPath: "nonce", className: testClassName)
 
         XCTAssertEqual(exception.message, "Failed to convert nonce string to UTF-8 data")
     }
 
     func testAccessDeniedUsesAccessDeniedCode() {
-        let exception = AccessDenied(message: "denied", className: className)
+        let exception = AccessDenied(message: "denied", className: testClassName)
 
         XCTAssertEqual(exception.errorCode, OpenID4VPErrorCodes.accessDenied)
         XCTAssertEqual(exception.message, "denied")
     }
 
     func testInvalidTransactionDataUsesTransactionDataCode() {
-        let exception = InvalidTransactionData(message: "bad txn", className: className)
+        let exception = InvalidTransactionData(message: "bad txn", className: testClassName)
 
         XCTAssertEqual(exception.errorCode, OpenID4VPErrorCodes.invalidTransactionData)
         XCTAssertEqual(exception.message, "bad txn")
     }
 
     func testUnsupportedOperationExceptionDefaultsToUnsupportedOperation() {
-        let exception = UnsupportedOperationException(message: "nope", className: className)
+        let exception = UnsupportedOperationException(message: "nope", className: testClassName)
 
         XCTAssertEqual(exception.errorCode, "unsupported_operation")
         XCTAssertEqual(exception.message, "nope")
@@ -545,7 +545,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
     func testUnsupportedOperationExceptionHonoursExplicitCode() {
         let exception = UnsupportedOperationException(
             message: "nope",
-            className: className,
+            className: testClassName,
             code: "invalid_request"
         )
 
@@ -553,7 +553,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
     }
 
     func testErrorDispatchFailurePrefixesMessage() {
-        let exception = ErrorDispatchFailure(message: "timeout", className: className)
+        let exception = ErrorDispatchFailure(message: "timeout", className: testClassName)
 
         XCTAssertEqual(exception.errorCode, OpenID4VPErrorCodes.errorDispatchFailure)
         XCTAssertEqual(exception.message, "Failed to send error to verifier: timeout")
@@ -562,7 +562,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
     func testVerifiablePresentationConstructionFailureWrapsCause() {
         let exception = VerifiablePresentationConstructionFailure(
             cause: SampleCause(),
-            className: className
+            className: testClassName
         )
 
         XCTAssertEqual(exception.errorCode, OpenID4VPErrorCodes.serverError)
@@ -576,7 +576,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
     func testAuthorizationResponseConstructionFailureWrapsCause() {
         let exception = AuthorizationResponseConstructionFailure(
             cause: SampleCause(),
-            className: className
+            className: testClassName
         )
 
         XCTAssertEqual(exception.errorCode, OpenID4VPErrorCodes.serverError)
@@ -588,7 +588,7 @@ final class OpenId4VPExceptionsTests: XCTestCase {
     }
 
     func testSubclassesInheritErrorDescriptionAndErrorResponse() {
-        let exception = InvalidVerifier(message: "unknown verifier", className: className)
+        let exception = InvalidVerifier(message: "unknown verifier", className: testClassName)
 
         XCTAssertEqual(exception.errorDescription, "unknown verifier")
         XCTAssertEqual(exception.description, "invalid_client : unknown verifier")

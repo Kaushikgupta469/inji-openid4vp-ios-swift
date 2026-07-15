@@ -20,10 +20,10 @@ jobs:
           xcodebuild -version
 
       - name: Build
-        run: swift build 2>&1 | tail -40
+        run: swift build
 
       - name: Run tests with coverage
-        run: swift test --enable-code-coverage 2>&1 | tail -40
+        run: swift test --enable-code-coverage
 
       - name: Locate coverage artifacts
         if: always()
