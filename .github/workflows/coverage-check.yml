@@ -1,0 +1,57 @@
+name: Coverage check
+
+on:
+  push:
+    branches:
+      - 'coverage/**'
+  workflow_dispatch:
+
+jobs:
+  test-and-coverage:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Toolchain details
+        run: |
+          swift --version
+          xcodebuild -version
+
+      - name: Build
+        run: swift build 2>&1 | tail -40
+
+      - name: Run tests with coverage
+        run: swift test --enable-code-coverage 2>&1 | tail -60
+
+      - name: Coverage summary
+        if: always()
+        run: |
+          BIN_PATH="$(swift build --show-bin-path)"
+          PROFDATA="${BIN_PATH}/codecov/default.profdata"
+          XCTEST_BUNDLE="$(find "${BIN_PATH}" -name '*.xctest' -maxdepth 1 | head -1)"
+          BUNDLE_NAME="$(basename "${XCTEST_BUNDLE}" .xctest)"
+          BINARY="${XCTEST_BUNDLE}/Contents/MacOS/${BUNDLE_NAME}"
+
+          echo "=== PER-FILE COVERAGE (Sources only) ==="
+          xcrun llvm-cov report "${BINARY}" \
+            -instr-profile "${PROFDATA}" \
+            -ignore-filename-regex='(\.build|Tests)/' \
+            2>&1 | tail -60
+
+          echo "=== LCOV EXPORT ==="
+          xcrun llvm-cov export "${BINARY}" \
+            -instr-profile "${PROFDATA}" \
+            -format=lcov \
+            -ignore-filename-regex='(\.build|Tests)/' \
+            > coverage.lcov
+          wc -l coverage.lcov
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov
+          path: coverage.lcov
+          if-no-files-found: warn
