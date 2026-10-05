@@ -244,7 +244,9 @@ class UnsignedLdpVPTokenBuilder: UnsignedVPTokenBuilder {
     }
     
     func validateHolderId(_ holderId: String) throws -> String {
-        let hasValidDidSyntax = holderId.range(of: supportedHolderDidPattern, options: .regularExpression) != nil
+        let sanitizedHolderId = stripDidJwkPadding(holderId)
+
+        let hasValidDidSyntax = sanitizedHolderId.range(of: supportedHolderDidPattern, options: .regularExpression) != nil
         let hasValidDidKeyFragment: Bool
         if holderId.hasPrefix("did:key:"), let separatorIndex = holderId.firstIndex(of: "#") {
             let fingerprint = holderId[holderId.index(holderId.startIndex, offsetBy: "did:key:".count)..<separatorIndex]

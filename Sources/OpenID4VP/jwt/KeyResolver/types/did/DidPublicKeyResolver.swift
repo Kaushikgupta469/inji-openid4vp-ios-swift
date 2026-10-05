@@ -46,7 +46,20 @@ public class DidPublicKeyResolver : PublicKeyResolver {
     }
 }
 
+// NOTE: Temporary. inji-certify before inji/inji-certify#1055 issued did:jwk holder IDs with
+// base64url "=" padding, which DID syntax does not allow. Strip it so those holder DIDs still
+// validate and resolve. Clean up once credentials with padded did:jwk are no longer in use.
+func stripDidJwkPadding(_ didUrl: String) -> String {
+    guard didUrl.hasPrefix("did:jwk:") else { return didUrl }
+
+    let parts = didUrl.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false)
+    let did = parts[0].trimmingCharacters(in: CharacterSet(charactersIn: "="))
+
+    return parts.count > 1 ? "\(did)#\(parts[1])" : did
+}
+
 private func parseDid(_ didUrl: String) throws -> ParsedDID {
+    let didUrl = stripDidJwkPadding(didUrl)
     let pctEncoded = "(?:%[0-9a-fA-F]{2})"
     let idChar = "(?:[a-zA-Z0-9._-]|\(pctEncoded))"
     let method = "([a-z0-9]+)"
