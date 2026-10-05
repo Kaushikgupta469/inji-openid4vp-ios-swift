@@ -123,4 +123,18 @@ class DidPublicKeyResolverTests: XCTestCase {
         XCTAssertEqual("ES256", resolvedJWSAlgrithm1)
         XCTAssertEqual("RS256", resolvedJWSAlgrithm2)
     }
+    
+    func testDidJwkWithBase64UrlPaddingResolvesToSameKeyAsWithoutPadding() async throws {
+        let unpaddedDid = "did:jwk:eyJrdHkiOiAiT0tQIiwgImNydiI6ICJFZDI1NTE5IiwgIngiOiAiOGc5ZF9NQjBpVTJubWdiXzlQNERmMFRSUW01UkpUbWFpRWsySGtaeTVwRSIsICJhbGciOiAiRWREU0EiLCAia2V5X29wcyI6IFsidmVyaWZ5Il0sICJ1c2UiOiAic2lnIn0"
+        let paddedDid = unpaddedDid + "="
+        let expectedJWSAlgorithm = try await didKeyResolver.getJWSAlgorithm(uri: unpaddedDid + "#0")
+        
+        for did in [paddedDid, paddedDid + "#0", unpaddedDid + "#0"] {
+            let publicKey = try await didKeyResolver.resolve(uri: did)
+            assertPublicKey(expectedBase64Encoded: "8g9d/MB0iU2nmgb/9P4Df0TRQm5RJTmaiEk2HkZy5pE=", actualKey: publicKey)
+            
+            let jwsAlgorithm = try await didKeyResolver.getJWSAlgorithm(uri: did)
+            XCTAssertEqual(jwsAlgorithm, expectedJWSAlgorithm)
+        }
+    }
 }
