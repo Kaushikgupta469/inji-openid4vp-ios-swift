@@ -4,7 +4,7 @@ import XCTest
 final class AuthorizationRequestTests: XCTestCase {
     
     private var mockNetworkManager: MockNetworkManager!
-    private var mockSetResponseUri: (String) -> Void = { _ in }
+    private var mockSetResponseDispatchInfo: (ResponseDispatchInfo) -> Void = { _ in }
     private var trustedVerifiers: [Verifier]!
     
     override func setUp() {
@@ -24,7 +24,7 @@ final class AuthorizationRequestTests: XCTestCase {
         let request = try await AuthorizationRequest.validateAndCreateAuthorizationRequest(
             urlEncodedAuthorizationRequest: testValidUrlEncodedVPRequestWithResponseUri,
             walletConfig: WalletConfig(trustedVerifiers: trustedVerifiers, validateTrustedVerifier: false),
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager
         )
@@ -41,7 +41,7 @@ final class AuthorizationRequestTests: XCTestCase {
             try await AuthorizationRequest.validateAndCreateAuthorizationRequest(
                 urlEncodedAuthorizationRequest: urlWithoutClientId,
                 walletConfig: WalletConfig(trustedVerifiers: trustedVerifiers, validateTrustedVerifier: false),
-                setResponseUri: mockSetResponseUri,
+                setResponseDispatchInfo: mockSetResponseDispatchInfo,
                 walletNonce: "mock-nonce",
                 networkManager: mockNetworkManager
             )
@@ -67,7 +67,7 @@ final class AuthorizationRequestTests: XCTestCase {
         let request = try await AuthorizationRequest.validateAndCreateAuthorizationRequest(
             authRequest: authRequest,
             walletConfig: WalletConfig(trustedVerifiers: trustedVerifiers, validateTrustedVerifier: false),
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager
         )
@@ -87,7 +87,7 @@ final class AuthorizationRequestTests: XCTestCase {
         let request = try await AuthorizationRequest.validateAndCreateAuthorizationRequest(
             authRequest: authRequest,
             walletConfig: WalletConfig(trustedVerifiers: trustedVerifiers, validateTrustedVerifier: false),
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager
         )
@@ -106,7 +106,7 @@ final class AuthorizationRequestTests: XCTestCase {
             try await AuthorizationRequest.validateAndCreateAuthorizationRequest(
                 authRequest: authRequest,
                 walletConfig: WalletConfig(trustedVerifiers: trustedVerifiers, validateTrustedVerifier: false),
-                setResponseUri: mockSetResponseUri,
+                setResponseDispatchInfo: mockSetResponseDispatchInfo,
                 walletNonce: "mock-nonce",
                 networkManager: mockNetworkManager
             )
@@ -126,7 +126,7 @@ final class AuthorizationRequestTests: XCTestCase {
         let request = try await AuthorizationRequest.validateAndCreateAuthorizationRequest(
             urlEncodedAuthorizationRequest: testValidUrlEncodedVPRequestWithResponseUri,
             walletConfig: WalletConfig(trustedVerifiers: trustedVerifiers, validateTrustedVerifier: false),
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager
         )
@@ -141,7 +141,7 @@ final class AuthorizationRequestTests: XCTestCase {
         let request = try await AuthorizationRequest.validateAndCreateAuthorizationRequest(
             urlEncodedAuthorizationRequest: testValidUrlEncodedVPRequestWithResponseUri,
             walletConfig: WalletConfig(trustedVerifiers: trustedVerifiers, validateTrustedVerifier: false),
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager
         )
@@ -171,7 +171,7 @@ final class AuthorizationRequestTests: XCTestCase {
         let request = try await AuthorizationRequest.validateAndCreateAuthorizationRequest(
             urlEncodedAuthorizationRequest: urlEncoded,
             walletConfig: WalletConfig(trustedVerifiers: trustedVerifiers, validateTrustedVerifier: false),
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager
         )
@@ -198,7 +198,7 @@ final class AuthorizationRequestTests: XCTestCase {
         let request = try await AuthorizationRequest.validateAndCreateAuthorizationRequest(
             urlEncodedAuthorizationRequest: urlEncoded,
             walletConfig: WalletConfig(trustedVerifiers: trustedVerifiers, validateTrustedVerifier: false),
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager
         )
@@ -222,7 +222,7 @@ final class AuthorizationRequestTests: XCTestCase {
         let request = try await AuthorizationRequest.validateAndCreateAuthorizationRequest(
             authRequest: authRequest,
             walletConfig: WalletConfig(trustedVerifiers: trustedVerifiers, validateTrustedVerifier: false),
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager
         )
@@ -250,7 +250,7 @@ final class AuthorizationRequestTests: XCTestCase {
         let request = try await AuthorizationRequest.validateAndCreateAuthorizationRequest(
             authRequest: authRequest,
             walletConfig: WalletConfig(trustedVerifiers: trustedVerifiers, validateTrustedVerifier: false),
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager
         )
@@ -275,7 +275,7 @@ final class AuthorizationRequestTests: XCTestCase {
         let request = try await AuthorizationRequest.validateAndCreateAuthorizationRequest(
             authRequest: authRequest,
             walletConfig: WalletConfig(trustedVerifiers: trustedVerifiers, validateTrustedVerifier: false),
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager
         )
@@ -298,7 +298,7 @@ final class AuthorizationRequestTests: XCTestCase {
         let request = try await AuthorizationRequest.validateAndCreateAuthorizationRequest(
             authRequest: authRequest,
             walletConfig: WalletConfig(trustedVerifiers: trustedVerifiers, validateTrustedVerifier: false),
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager
         )
@@ -315,7 +315,7 @@ final class AuthorizationRequestTests: XCTestCase {
             try await AuthorizationRequest.validateAndCreateAuthorizationRequest(
                 urlEncodedAuthorizationRequest: malformedUrl,
                 walletConfig: WalletConfig(trustedVerifiers: trustedVerifiers, validateTrustedVerifier: false),
-                setResponseUri: mockSetResponseUri,
+                setResponseDispatchInfo: mockSetResponseDispatchInfo,
                 walletNonce: "mock-nonce",
                 networkManager: mockNetworkManager
             )
@@ -347,7 +347,7 @@ final class AuthorizationRequestTests: XCTestCase {
             try await AuthorizationRequest.validateAndCreateAuthorizationRequest(
                 urlEncodedAuthorizationRequest: urlEncoded,
                 walletConfig: WalletConfig(trustedVerifiers: trustedVerifiers, validateTrustedVerifier: false),
-                setResponseUri: mockSetResponseUri,
+                setResponseDispatchInfo: mockSetResponseDispatchInfo,
                 walletNonce: "mock-nonce",
                 networkManager: mockNetworkManager
             )
@@ -364,7 +364,7 @@ final class AuthorizationRequestTests: XCTestCase {
             try await AuthorizationRequest.validateAndCreateAuthorizationRequest(
                 authRequest: authRequest,
                 walletConfig: WalletConfig(trustedVerifiers: trustedVerifiers, validateTrustedVerifier: false),
-                setResponseUri: mockSetResponseUri,
+                setResponseDispatchInfo: mockSetResponseDispatchInfo,
                 walletNonce: "mock-nonce",
                 networkManager: mockNetworkManager
             )

@@ -115,6 +115,11 @@ class LdpVPTokenBuilder: VPTokenBuilder {
             proof?.jws = getHeader(unsignedVPToken) + ".." + vpTokenSigningResult.signedData.toBase64UrlEncoded()
         case SignatureSuite.rsaSignature2018.rawValue:
             proof?.signatureValue = vpTokenSigningResult.signedData.toBase64UrlEncoded()
+        case SignatureSuite.dataIntegrityProof.rawValue:
+            guard vpTokenSigningResult.signedData.count == 64 else {
+                throw InvalidSignature(message: "Data Integrity Ed25519 and P-256 signatures must be exactly 64 bytes", className: className)
+            }
+            proof?.proofValue = BaseEncoding.base58BtcEncode(vpTokenSigningResult.signedData)
         default:
             proof?.proofValue = BaseEncoding.base58BtcEncode(vpTokenSigningResult.signedData)
         }

@@ -7,6 +7,33 @@ final class ClientMetadataTests: XCTestCase {
     {"keys": [{"kty": "EC", "use": "enc", "alg": "ECDH-ES", "kid": "1", "crv": "P-256", "x": "ur76rg", "y": "ur76rg"}]}
     """
 
+    private let mixedJwks = """
+    {
+        "keys": [
+            {
+                "kty": "EC",
+                "use": "enc",
+                "alg": "ECDH-ES",
+                "kid": "valid-enc-key",
+                "crv": "P-256",
+                "x": "gI0GAILBdu7T53akrFmMyGcsF3n5dO7MmwNBHKW5SV0",
+                "y": "SLW_xSffzlPWrHEVI30DHM_4egVwt3NQqeUD7nMFpps"
+            },
+            {
+                "kty": "AKP",
+                "alg": "ML-KEM-9999",
+                "use": "enc",
+                "kid": "post-quantum-key"
+            },
+            {
+                "kty": "OIDF-CONFORMANCE-UNSUPPORTED",
+                "use": "enc",
+                "kid": "unsupported-key"
+            }
+        ]
+    }
+    """
+
     // MARK: - init (memberwise)
 
     func testInitStoresAllFields() {
@@ -232,8 +259,25 @@ final class ClientMetadataTests: XCTestCase {
         }
     }
 
+    // MARK: - jwks decoding
+
+    func testV1IgnoresUnusableEncryptionKeys() throws {
+        let data = json(jwks: mixedJwks)
+
+        let decoded = try JSONDecoder().decode(ClientMetadata.self, from: data)
+
+        XCTAssertEqual(decoded.jwks?.keys.count, 1)
+        XCTAssertEqual(decoded.jwks?.keys.first?.keyID, "valid-enc-key")
+    }
+
+    func testV1RejectsExplicitNullJwks() {
+        let data = json(jwks: "null")
+
+        XCTAssertThrowsError(try JSONDecoder().decode(ClientMetadata.self, from: data))
+    }
+
     // MARK: - Helper methods
-    
+
     private func json(
         clientName: String? = "\"Test Client\"",
         logoUri: String? = "\"https://example.com/logo.png\"",

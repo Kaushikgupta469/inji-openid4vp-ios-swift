@@ -4,7 +4,7 @@ import XCTest
 
 final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
     let mockNetworkManager: MockNetworkManager! = MockNetworkManager()
-    let mockSetResponseUri: (String) -> Void = { value in
+    let mockSetResponseDispatchInfo: (ResponseDispatchInfo) -> Void = { _ in
     }
     var decodedClientMetadata: ClientMetadataDraft23?
     var decodedPresentationDefinition: PresentationDefinition?
@@ -27,7 +27,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         let authorizationRequestParametersByValue: [String : Any] = createAuthorizationRequest(paramList: authRequestWithRedirectUriByValue , requestParams: mergeMaps(authorizationRequestParamsWithValue, preRegisteredSchemeClientIdParameters), specVersion: .draft23) as [String : Any]
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByValue,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -46,7 +46,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         let authorizationRequestParametersByValue1: [String : Any] = createAuthorizationRequest(paramList: authRequestWithRedirectUriByValue , requestParams: mergeMaps(authorizationRequestParamsWithValue, DidSchemeClientIdParameters[.v1]!), isSigned: true, specVersion: .v1) as [String : Any]
         let mockAuthHandler1 = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByValue1,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -63,7 +63,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         let authorizationRequestParametersByValue2: [String : Any] = createAuthorizationRequest(paramList: authRequestWithRedirectUriByValue , requestParams: mergeMaps(authorizationRequestParamsWithValue, DidSchemeClientIdParameters[.v1]!), isSigned: true, specVersion: .draft23) as [String : Any]
         let mockAuthHandler2 = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByValue2,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -93,7 +93,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         mockNetworkManager.setMockResponse(for: didDocumentUrl,responseBody: didResponse)
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByReference,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -112,7 +112,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         let authorizationRequestParametersByValue: [String : Any] = createAuthorizationRequest(paramList: authRequestWithRedirectUriByValue , requestParams: mergeMaps(authorizationRequestParamsWithValue, preRegisteredSchemeClientIdParameters), specVersion: .draft23) as [String : Any]
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByValue,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -134,7 +134,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         let authorizationRequestParametersByValue: [String : Any] = createAuthorizationRequest(paramList: authRequestWithRedirectUriByValue , requestParams: mergeMaps(authorizationRequestParamsWithValue, preRegisteredSchemeClientIdParameters), specVersion: .v1) as [String : Any]
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByValue,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -163,7 +163,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
 
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParameters,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -186,7 +186,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         let authorizationRequestParametersByValue: [String : Any] = createAuthorizationRequest(paramList: authRequestWithRedirectUriByValue , requestParams: mergeMaps(authorizationRequestParamsWithValue, preRegisteredSchemeClientIdParameters)) as [String : Any]
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByValue,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -210,7 +210,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         let authorizationRequestParametersByValue: [String : Any] = createAuthorizationRequest(paramList: authRequestWithRedirectUriByValue , requestParams: mergeMaps(authorizationRequestParamsWithValue, DidSchemeClientIdParameters[.v1]!), isSigned: true, specVersion: .v1) as [String : Any]
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByValue,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -233,7 +233,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         ) as [String : Any]
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByValue,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -258,7 +258,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         ]
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByValue,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -280,7 +280,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         let authorizationRequestParametersByValue: [String : Any] = createAuthorizationRequest(paramList: authRequestWithRedirectUriByValue , requestParams: mergeMaps(authorizationRequestParamsWithValue, DidSchemeClientIdParameters[.v1]!), isSigned: true, specVersion: .v1) as [String : Any]
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByValue,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -311,7 +311,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         mockNetworkManager.setMockResponse(for: didDocumentUrl, responseBody: didResponse)
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParameters,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -328,7 +328,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         let authorizationRequestParametersByReference: [String : Any] = createAuthorizationRequest(paramList: authRequestParamsByReference , requestParams: mergeMaps(authorizationRequestParamsWithValue, redirectUriSchemeClientIdParameter), specVersion: .v1) as [String : Any]
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByReference,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -354,7 +354,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         mockNetworkManager.setMockResponse(for: didDocumentUrl,responseBody: didResponse)
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByReference,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -383,7 +383,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         mockNetworkManager.setMockResponse(for: didDocumentUrl,responseBody: didResponse)
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByReference,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -415,7 +415,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         mockNetworkManager.setMockResponse(for: didDocumentUrl,responseBody: didResponse)
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByReference,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -445,7 +445,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         mockNetworkManager.setMockResponse(for: didDocumentUrl,responseBody: didResponse)
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByReference,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -472,7 +472,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByReference,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -500,7 +500,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByReference,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -528,7 +528,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByReference,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -556,7 +556,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByReference,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -583,7 +583,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByReference,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -611,7 +611,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByReference,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -642,7 +642,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByReference,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -671,7 +671,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByReference,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -723,7 +723,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
 
             let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
                 authorizationRequestParameters: authorizationRequestParameters,
-                setResponseUri: mockSetResponseUri,
+                setResponseDispatchInfo: mockSetResponseDispatchInfo,
                 walletNonce: "mock-nonce",
                 networkManager: mockNetworkManager,
                 clientId: "mock-client-id",
@@ -753,7 +753,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByReference,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -783,7 +783,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         mockNetworkManager.setMockResponse(for: didDocumentUrl, responseBody: didResponse)
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParameters,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -860,7 +860,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         mockNetworkManager.setMockResponse(for: "https://mock-verifier.com/verifier/get-auth-request-obj",responseBody: authorizationRequestObject)
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParameters,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -886,7 +886,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         mockNetworkManager.setMockResponse(for: requestUri.absoluteString, responseBody: authorizationRequestObject)
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParameters,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -907,7 +907,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         let authorizationRequestParameters: [String: Any] = createAuthorizationRequest(paramList: authRequestWithRedirectUriByValue.map { $0 == "presentation_definition" ? "presentation_definition_uri" : $0 } , requestParams: mergeMaps(authorizationRequestParamsWithValue, redirectUriSchemeClientIdParameter), specVersion: .v1) as [String : Any]
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParameters,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -973,7 +973,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         let authorizationRequestParametersByReference: [String : Any] = createAuthorizationRequest(paramList: authRequestParamsByReference , requestParams: mergeMaps(authorizationRequestParamsWithValue, preRegisteredSchemeClientIdParameters,["request_uri": "http://invalid-mock-verifier.com"]), specVersion: .v1) as [String : Any]
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParametersByReference,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -994,7 +994,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
     
     func testShouldThrowErrorWhenAuthRequestsAlgObtainedByReferenceDoesNotMatchWithWalletMetadata() async {
         let authorizationRequestParametersByReference: [String : Any] = createAuthorizationRequest(paramList: authRequestParamsByReference , requestParams: mergeMaps(authorizationRequestParamsWithValue, DidSchemeClientIdParameters[.v1]!), specVersion: .v1) as [String : Any]
-        let mockSchemeAuthRequestHandler = MockClientIdPrefixAuthRequestHandler(authorizationRequestParameters: authorizationRequestParametersByReference, setResponseUri: mockSetResponseUri, walletNonce: "mock-nonce", networkManager: mockNetworkManager, clientId: didUrl, specVersion: .v1, walletConfig: walletConfig, isSignedRequestSupported: true, isUnsignedRequestSupported: true)
+        let mockSchemeAuthRequestHandler = MockClientIdPrefixAuthRequestHandler(authorizationRequestParameters: authorizationRequestParametersByReference, setResponseDispatchInfo: mockSetResponseDispatchInfo, walletNonce: "mock-nonce", networkManager: mockNetworkManager, clientId: didUrl, specVersion: .v1, walletConfig: walletConfig, isSignedRequestSupported: true, isUnsignedRequestSupported: true)
         mockSchemeAuthRequestHandler.shouldValidateWithWalletMetadata = true
         let requestUriResponse = createRequestUriResponse("ewogICJhbGciOiAiSFMyNTYiLAogICJ0eXAiOiAib2F1dGgtYXV0aHotcmVxK2p3dCIKfQ.eyJ10.SflK5c")
         mockNetworkManager.setMockResponse(for: requestUri.absoluteString,response: (responseBody: requestUriResponse.body, httpUrlResponse: requestUriResponse.httpUrlResponse))
@@ -1010,7 +1010,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
     func testThrowErrorWhenClientIdSchemeIsNotSupportedAsPerWalletConfig() async {
         let  minimalWalletMetadata = createWalletConfig(clientIdPrefixesSupported: [.preRegistered])
         let authorizationRequestParametersByReference: [String : Any] = createAuthorizationRequest(paramList: authRequestParamsByReference , requestParams: mergeMaps(authorizationRequestParamsWithValue, ["client_id": "redirect_uri:https://federation-verifier.example.com."], ["request_uri_method": "post"])) as [String : Any]
-        let mockSchemeAuthRequestHandler = MockClientIdPrefixAuthRequestHandler(authorizationRequestParameters: authorizationRequestParametersByReference, setResponseUri: mockSetResponseUri, walletNonce: "mock-nonce", networkManager: mockNetworkManager, clientId: "", specVersion: .v1, walletConfig: minimalWalletMetadata, isSignedRequestSupported: true, isUnsignedRequestSupported: true)
+        let mockSchemeAuthRequestHandler = MockClientIdPrefixAuthRequestHandler(authorizationRequestParameters: authorizationRequestParametersByReference, setResponseDispatchInfo: mockSetResponseDispatchInfo, walletNonce: "mock-nonce", networkManager: mockNetworkManager, clientId: "", specVersion: .v1, walletConfig: minimalWalletMetadata, isSignedRequestSupported: true, isUnsignedRequestSupported: true)
         mockSchemeAuthRequestHandler.shouldValidateWithWalletMetadata = true
         let requestUriResponse = createRequestUriResponse("ewogICJhbGciOiAiSFMyNTYiLAogICAgInR5cCI6ICJvYXV0aC1hdXRoei1yZXErand0Igp9.eyJ10.SflK5c")
         mockNetworkManager.setMockResponse(for: requestUri.absoluteString,response: (responseBody: requestUriResponse.body, httpUrlResponse: requestUriResponse.httpUrlResponse))
@@ -1050,7 +1050,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
             
             let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
                 authorizationRequestParameters: authorizationRequestParameters,
-                setResponseUri: mockSetResponseUri,
+                setResponseDispatchInfo: mockSetResponseDispatchInfo,
                 walletNonce: "mock-nonce",
                 networkManager: mockNetworkManager,
                 clientId: "mock-client-id",
@@ -1072,29 +1072,117 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
     
     
 //    Fetch info for sending response (error or authorization response) to verifier
-    func testResponseUrlSetSuccessfullyForResponseModeDirectPost(){
-        let authorizationRequestParameters: [String : Any] = createAuthorizationRequest(paramList: authRequestWithPreRegisteredByValue , requestParams: mergeMaps(authorizationRequestParamsWithValue, preRegisteredSchemeClientIdParameters))  as [String : Any]
-        let expectation = expectation(description: "Handler should be called with expected parameter")
-        var responseUri: String?
-        let mockSetResponseUri: (String) -> Void = { value in
-            responseUri = value
-            expectation.fulfill()
-        }
-        
-        let clientIdPrefixBasedAuthorizationRequestHandler = ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass(clientId: "mock-client", specVersion: .v1 ,authorizationRequestParameters: authorizationRequestParameters, walletConfig: walletConfig, setResponseUri: mockSetResponseUri, walletNonce: "mock-nonce", networkManager: mockNetworkManager)
-        try? clientIdPrefixBasedAuthorizationRequestHandler.setResponseUrl()
-        
-        wait(for: [expectation], timeout: 2.0)
-        XCTAssertEqual(responseUri, "https://mock-verifier.com", "Handler was called with unexpected parameter")
+    func testResponseUrlSetSuccessfullyForResponseModeDirectPost() {
+        let authorizationRequestParameters: [String: Any] = createAuthorizationRequest(
+            paramList: authRequestWithPreRegisteredByValue,
+            requestParams: mergeMaps(authorizationRequestParamsWithValue, preRegisteredSchemeClientIdParameters)
+        ) as [String: Any]
+
+        let handler = ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass(
+            clientId: "mock-client",
+            specVersion: .v1,
+            authorizationRequestParameters: authorizationRequestParameters,
+            walletConfig: walletConfig,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
+            walletNonce: "mock-nonce",
+            networkManager: mockNetworkManager
+        )
+
+        XCTAssertNoThrow(try handler.prepareDispatchInfo())
+        XCTAssertEqual(handler.responseDispatchInfo?.responseUrl, "https://mock-verifier.com")
+    }
+
+    func testPrepareDispatchInfoSetsExpectedDispatchInfoFields() throws {
+        let authorizationRequestParameters: [String: Any] = createAuthorizationRequest(
+            paramList: authRequestWithPreRegisteredByValue,
+            requestParams: mergeMaps(authorizationRequestParamsWithValue, preRegisteredSchemeClientIdParameters)
+        ) as [String: Any]
+
+        let handler = ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass(
+            clientId: "mock-client",
+            specVersion: .v1,
+            authorizationRequestParameters: authorizationRequestParameters,
+            walletConfig: walletConfig,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
+            walletNonce: "mock-nonce",
+            networkManager: mockNetworkManager
+        )
+
+        try handler.prepareDispatchInfo()
+        let dispatchInfo = try XCTUnwrap(handler.responseDispatchInfo)
+        XCTAssertEqual(dispatchInfo.responseMode, ResponseMode.directPost.rawValue)
+        XCTAssertEqual(dispatchInfo.nonce, authorizationRequestParameters[AuthorizationRequestFieldConstants.nonce] as? String)
+        XCTAssertEqual(dispatchInfo.state, authorizationRequestParameters[AuthorizationRequestFieldConstants.state] as? String)
+        XCTAssertEqual(dispatchInfo.clientId, "mock-client")
+        XCTAssertEqual(dispatchInfo.walletNonce, "mock-nonce")
+        XCTAssertEqual(dispatchInfo.responseUrl, authorizationRequestParameters[AuthorizationRequestFieldConstants.responseUri] as? String)
+        XCTAssertNil(dispatchInfo.responseEncryptionSpecification)
+    }
+
+    func testPrepareDispatchInfoDefaultsToDirectPostWhenResponseModeIsAbsent() throws {
+        // paramList without "response_mode" so the key is absent from authorizationRequestParameters
+        let paramListWithoutResponseMode = authRequestWithPreRegisteredByValue.filter { $0 != AuthorizationRequestFieldConstants.responseMode }
+        let authorizationRequestParameters: [String: Any] = createAuthorizationRequest(
+            paramList: paramListWithoutResponseMode,
+            requestParams: mergeMaps(authorizationRequestParamsWithValue, preRegisteredSchemeClientIdParameters)
+        ) as [String: Any]
+
+        let handler = ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass(
+            clientId: "mock-client",
+            specVersion: .v1,
+            authorizationRequestParameters: authorizationRequestParameters,
+            walletConfig: walletConfig,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
+            walletNonce: "mock-nonce",
+            networkManager: mockNetworkManager
+        )
+
+        try handler.prepareDispatchInfo()
+        let dispatchInfo = try XCTUnwrap(handler.responseDispatchInfo)
+        XCTAssertEqual(dispatchInfo.responseMode, ResponseMode.directPost.rawValue)
+    }
+
+    func testValidateAndParseRequestFieldsPopulatesDispatchInfoWithEncryptionSpecification() async throws {
+        let authorizationRequestParameters: [String: Any] = createAuthorizationRequest(
+            paramList: authRequestWithPreRegisteredByValue,
+            requestParams: mergeMaps(
+                authorizationRequestParamsWithValue,
+                preRegisteredSchemeClientIdParameters,
+                [AuthorizationRequestFieldConstants.responseMode: ResponseMode.directPostJwt.rawValue]
+            ),
+            specVersion: .v1
+        ) as [String: Any]
+
+        let handler = ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass(
+            clientId: "mock-client",
+            specVersion: .v1,
+            authorizationRequestParameters: authorizationRequestParameters,
+            walletConfig: walletConfig,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
+            walletNonce: "mock-nonce",
+            networkManager: mockNetworkManager
+        )
+        handler.setSpecVersionHandler(.v1)
+
+        try handler.prepareDispatchInfo()
+        await XCTAssertAsyncNoThrowsError(try await handler.validateAndParseRequestFields())
+
+        let dispatchInfo = try XCTUnwrap(handler.responseDispatchInfo)
+        let encryptionSpec = try XCTUnwrap(dispatchInfo.responseEncryptionSpecification)
+        XCTAssertEqual(dispatchInfo.responseMode, ResponseMode.directPostJwt.rawValue)
+        XCTAssertEqual(dispatchInfo.responseUrl, authorizationRequestParameters[AuthorizationRequestFieldConstants.responseUri] as? String)
+        XCTAssertEqual(encryptionSpec.keyEncryptionAlg.rawValue, "ECDH-ES")
+        XCTAssertEqual(encryptionSpec.contentEncryptionAlg.rawValue, "A256GCM")
+        XCTAssertEqual(encryptionSpec.verifierPublicKey.publicKeyUse, .encryption)
     }
     
     func testFetchInfoForSendingResponseToVerifierForInvalidResponseModeThrowInvalidResponseModeError() {
         let testCases: [TestCase<[String: String?], Void>] = [
             TestCase(input: [AuthorizationRequestFieldConstants.responseMode: "fragment"], expectedError: "Given response_mode - fragment is not supported", expectedCode: OpenID4VPErrorCodes.invalidRequest),
-            TestCase(input: [AuthorizationRequestFieldConstants.responseMode: ""], expectedError: "Given response_mode -  is not supported", expectedCode: OpenID4VPErrorCodes.invalidRequest),
-            TestCase(input: [AuthorizationRequestFieldConstants.responseMode: "nil"], expectedError: "Given response_mode - nil is not supported", expectedCode: OpenID4VPErrorCodes.invalidRequest),
-            TestCase(input: [AuthorizationRequestFieldConstants.responseMode: "null"], expectedError: "Given response_mode - null is not supported", expectedCode: OpenID4VPErrorCodes.invalidRequest),
-            TestCase(input: [AuthorizationRequestFieldConstants.responseMode: nil], expectedError: "Given response_mode -  is not supported", expectedCode: OpenID4VPErrorCodes.invalidRequest)
+            // Empty string, "nil" string, and "null" string are caught by validateAttribute before reaching ResponseModeBasedHandlerFactory
+            TestCase(input: [AuthorizationRequestFieldConstants.responseMode: ""], expectedError: "Invalid Input: response_mode value cannot be empty or null", expectedCode: OpenID4VPErrorCodes.invalidRequest),
+            TestCase(input: [AuthorizationRequestFieldConstants.responseMode: "nil"], expectedError: "Invalid Input: response_mode value cannot be empty or null", expectedCode: OpenID4VPErrorCodes.invalidRequest),
+            TestCase(input: [AuthorizationRequestFieldConstants.responseMode: "null"], expectedError: "Invalid Input: response_mode value cannot be empty or null", expectedCode: OpenID4VPErrorCodes.invalidRequest)
         ]
         
         for testCase in testCases {
@@ -1106,12 +1194,12 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
             let handler = ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass(clientId: "mock-client", specVersion: .v1,
                 authorizationRequestParameters: authorizationRequestParameters,
                 walletConfig: walletConfig,
-                setResponseUri: mockSetResponseUri,
+                setResponseDispatchInfo: mockSetResponseDispatchInfo,
                 walletNonce: "mock-nonce",
                 networkManager: mockNetworkManager
             )
             
-            XCTAssertThrowsError(try handler.setResponseUrl()) { error in
+            XCTAssertThrowsError(try handler.prepareDispatchInfo()) { error in
                 assertOpenID4VPException(error, expectedMessage: testCase.expectedError!, expectedCode: testCase.expectedCode!)
             }
         }
@@ -1131,7 +1219,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParameters,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -1174,7 +1262,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParameters,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -1208,7 +1296,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
                                                                                                      specVersion: .draft23,
                                                                                                      authorizationRequestParameters: authorizationRequestParameters,
                                                                                                      walletConfig: walletConfig,
-                                                                                                     setResponseUri: mockSetResponseUri,
+                                                                                                     setResponseDispatchInfo: mockSetResponseDispatchInfo,
                                                                                                      walletNonce: "mock-nonce",
                                                                                                      networkManager: mockNetworkManager
         )
@@ -1241,7 +1329,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
                 specVersion: .v1,
                 authorizationRequestParameters: authorizationRequestParameters,
                 walletConfig: walletConfig,
-                setResponseUri: mockSetResponseUri,
+                setResponseDispatchInfo: mockSetResponseDispatchInfo,
                 walletNonce: "mock-nonce",
                 networkManager: mockNetworkManager
             )
@@ -1253,7 +1341,59 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
     }
     
     
-    func testInvalidRequestFieldErrorForStateField() async {
+    func testV1ParsingOfClientMetadataThrowErrorWhenClientMetadataNotPresentAndResponseModeIsDirectPostJwt() async throws {
+        let authorizationRequestParameters = createAuthorizationRequest(
+            paramList: authRequestWithPreRegisteredByValue.filter { $0 != AuthorizationRequestFieldConstants.clientMetadata },
+            requestParams: mergeMaps(authorizationRequestParamsWithValue, preRegisteredSchemeClientIdParameters, ["response_mode": "direct_post.jwt"])
+        ) as [String: Any]
+        let handler = ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass(
+            clientId: "mock-client",
+            specVersion: .v1,
+            authorizationRequestParameters: authorizationRequestParameters,
+            walletConfig: walletConfig,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
+            walletNonce: "mock-nonce",
+            networkManager: mockNetworkManager
+        )
+
+        await XCTAssertAsyncThrowsError((try await handler.validateAndParseRequestFields())) { error in
+            assertOpenID4VPException(
+                error,
+                expectedMessage: "client_metadata must be present for given response mode",
+                expectedCode: OpenID4VPErrorCodes.invalidRequest
+            )
+        }
+    }
+    
+    // In case of response mode direct_post_jwt, client_metadata is mandatory as the response will be signed which required shared key information available in client_metadata.
+    func testParsingOfClientMetadataThrowErrorWhenClientMetadataNotPresentAndResponseModeIsDirectPostJwt() async throws {
+        let authorizationRequestParameters = createAuthorizationRequest(
+            paramList: authRequestWithPreRegisteredByValue.filter { $0 != AuthorizationRequestFieldConstants.clientMetadata },
+            requestParams: mergeMaps(authorizationRequestParamsWithValue, preRegisteredSchemeClientIdParameters, ["response_mode": "direct_post.jwt"]),
+            specVersion: .draft23
+        ) as [String: Any]
+        let handler = ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass(
+            clientId: "mock-client",
+            specVersion: .draft23,
+            authorizationRequestParameters: authorizationRequestParameters,
+            walletConfig: walletConfig,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
+            walletNonce: "mock-nonce",
+            networkManager: mockNetworkManager
+        )
+        handler.setSpecVersionHandler(.draft23)
+
+        await XCTAssertAsyncThrowsError((try await handler.validateAndParseRequestFields())) { error in
+            assertOpenID4VPException(
+                error,
+                expectedMessage: "client_metadata must be present for given response mode",
+                expectedCode: OpenID4VPErrorCodes.invalidRequest
+            )
+        }
+    }
+    
+    
+    func testInvalidRequestFieldErrorForStateField() {
         let testCases: [TestCase<[String: Any], Void>] = [
             TestCase(input: ["state": "null"], expectedError: "Invalid Input: state value cannot be empty or null", expectedCode: OpenID4VPErrorCodes.invalidRequest),
             TestCase(input: ["state": ""], expectedError: "Invalid Input: state value cannot be empty or null", expectedCode: OpenID4VPErrorCodes.invalidRequest),
@@ -1271,19 +1411,19 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
                 specVersion: .v1,
                 authorizationRequestParameters: authorizationRequestParameters,
                 walletConfig: walletConfig,
-                setResponseUri: mockSetResponseUri,
+                setResponseDispatchInfo: mockSetResponseDispatchInfo,
                 walletNonce: "mock-nonce",
                 networkManager: mockNetworkManager
             )
             
-            await XCTAssertAsyncThrowsError(try await handler.validateAndParseRequestFields()) { error in
+            XCTAssertThrowsError(try handler.prepareDispatchInfo()) { error in
                 assertOpenID4VPException(error, expectedMessage: testCase.expectedError!, expectedCode: testCase.expectedCode!)
             }
         }
     }
     
     
-    func testInvalidRequestFieldErrorForResponseModeField() async {
+    func testInvalidRequestFieldErrorForResponseModeField() {
         let testCases: [TestCase<[String: Any], Void>] = [
             TestCase(input: [AuthorizationRequestFieldConstants.responseMode: "null"], expectedError: "Invalid Input: response_mode value cannot be empty or null", expectedCode: OpenID4VPErrorCodes.invalidRequest),
             TestCase(input: [AuthorizationRequestFieldConstants.responseMode: ""], expectedError: "Invalid Input: response_mode value cannot be empty or null", expectedCode: OpenID4VPErrorCodes.invalidRequest),
@@ -1301,19 +1441,19 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
                 specVersion: .v1,
                 authorizationRequestParameters: authorizationRequestParameters,
                 walletConfig: walletConfig,
-                setResponseUri: mockSetResponseUri,
+                setResponseDispatchInfo: mockSetResponseDispatchInfo,
                 walletNonce: "mock-nonce",
                 networkManager: mockNetworkManager
             )
             
-            await XCTAssertAsyncThrowsError(try await handler.validateAndParseRequestFields()) { error in
+            XCTAssertThrowsError(try handler.prepareDispatchInfo()) { error in
                 assertOpenID4VPException(error, expectedMessage: testCase.expectedError!, expectedCode: testCase.expectedCode!)
             }
         }
     }
     
     
-    func testInvalidRequestFieldErrorForNonceField() async {
+    func testInvalidRequestFieldErrorForNonceField() {
         let testCases: [TestCase<[String: Any?], Void>] = [
             TestCase(input: ["nonce": "null"], expectedError: "Invalid Input: nonce value cannot be empty or null", expectedCode: OpenID4VPErrorCodes.invalidRequest),
             TestCase(input: ["nonce": ""], expectedError: "Invalid Input: nonce value cannot be empty or null", expectedCode: OpenID4VPErrorCodes.invalidRequest),
@@ -1332,14 +1472,40 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
                 specVersion: .v1,
                 authorizationRequestParameters: authorizationRequestParameters,
                 walletConfig: walletConfig,
-                setResponseUri: mockSetResponseUri,
+                setResponseDispatchInfo: mockSetResponseDispatchInfo,
                 walletNonce: "mock-nonce",
                 networkManager: mockNetworkManager
             )
             
-            await XCTAssertAsyncThrowsError(try await handler.validateAndParseRequestFields()) { error in
+            XCTAssertThrowsError(try handler.prepareDispatchInfo()) { error in
                 assertOpenID4VPException(error, expectedMessage: testCase.expectedError!, expectedCode: testCase.expectedCode!)
             }
+        }
+    }
+    
+    func testPrepareDispatchInfoThrowsWhenNonceIsNonStringType() {
+        var authorizationRequestParameters = createAuthorizationRequest(
+            paramList: authRequestWithPreRegisteredByValue,
+            requestParams: mergeMaps(authorizationRequestParamsWithValue, preRegisteredSchemeClientIdParameters)
+        ) as [String: Any]
+        authorizationRequestParameters["nonce"] = 12345
+
+        let handler = ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass(
+            clientId: "mock-client",
+            specVersion: .v1,
+            authorizationRequestParameters: authorizationRequestParameters,
+            walletConfig: walletConfig,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
+            walletNonce: "mock-nonce",
+            networkManager: mockNetworkManager
+        )
+
+        XCTAssertThrowsError(try handler.prepareDispatchInfo()) { error in
+            assertOpenID4VPException(
+                error,
+                expectedMessage: "Invalid Input: nonce value cannot be empty or null",
+                expectedCode: OpenID4VPErrorCodes.invalidRequest
+            )
         }
     }
     
@@ -1350,7 +1516,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         let authorizationRequestParameters: [String: Any] = createAuthorizationRequest(paramList: authRequestWithRedirectUriByValue.map { $0 == "presentation_definition" ? "presentation_definition_uri" : $0 } , requestParams: mergeMaps(authorizationRequestParamsWithValue, redirectUriSchemeClientIdParameter, ["response_type": "vp_token id_token"]), specVersion: .v1) as [String : Any]
         mockNetworkManager.setMockResponse(for: "https://mock-verifier.com/presentation-definition",responseBody: presentationDefinition)
         
-        let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(authorizationRequestParameters: authorizationRequestParameters, setResponseUri: mockSetResponseUri, walletNonce: "mock-nonce", networkManager: mockNetworkManager)
+        let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(authorizationRequestParameters: authorizationRequestParameters, setResponseDispatchInfo: mockSetResponseDispatchInfo, walletNonce: "mock-nonce", networkManager: mockNetworkManager)
         
         await XCTAssertAsyncThrowsError(try await mockAuthHandler.validateAndParseRequestFields()) { error in
             assertOpenID4VPException(error,
@@ -1363,7 +1529,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
     func testShouldThrowErrorWhenInvalidClientMetadataIsProvided() async{
         let authorizationRequestParameters: [String : Any] = mergeMaps(resquestUriResponseData,["client_metadata": "{}"])
         let clientIdPrefixBasedAuthorizationRequestHandler = ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass(clientId: "mock-client",
-                                                                                                                     specVersion: .v1,authorizationRequestParameters: authorizationRequestParameters, walletConfig: walletConfig, setResponseUri: mockSetResponseUri, walletNonce: "mock-nonce",networkManager: mockNetworkManager)
+                                                                                                                     specVersion: .v1,authorizationRequestParameters: authorizationRequestParameters, walletConfig: walletConfig, setResponseDispatchInfo: mockSetResponseDispatchInfo, walletNonce: "mock-nonce",networkManager: mockNetworkManager)
         
         clientIdPrefixBasedAuthorizationRequestHandler.setSpecVersionHandler(.v1)
         await XCTAssertAsyncThrowsError(try await clientIdPrefixBasedAuthorizationRequestHandler.validateAndParseRequestFields()) { error in
@@ -1394,7 +1560,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         let authorizationRequestParameters: [String: Any] = mergeMaps(authorizationRequestParamsWithValue, redirectUriSchemeClientIdParameter, [AuthorizationRequestFieldConstants.transactionData: ["foo": "bar"]])
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParameters,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -1432,7 +1598,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
 
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParameters,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: didUrl,
@@ -1472,7 +1638,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
 
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParameters,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "mock-client-id",
@@ -1505,7 +1671,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
 
         let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
             authorizationRequestParameters: authorizationRequestParameters,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager,
             clientId: "redirect_uri:https://mock-verifier.com",
@@ -1545,7 +1711,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
             specVersion: .v1,
             authorizationRequestParameters: authorizationRequestParameters,
             walletConfig: walletConfig,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager
         )
@@ -1577,7 +1743,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
             specVersion: .v1,
             authorizationRequestParameters: authorizationRequestParameters,
             walletConfig: walletConfig,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager
         )
@@ -1604,7 +1770,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
             specVersion: .v1,
             authorizationRequestParameters: authorizationRequestParameters,
             walletConfig: walletConfig,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager
         )
@@ -1621,7 +1787,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
             specVersion: .draft23,
             authorizationRequestParameters: authorizationRequestParameters,
             walletConfig: walletConfig,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager
         )
@@ -1643,7 +1809,7 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
             specVersion: .v1,
             authorizationRequestParameters: authorizationRequestParameters,
             walletConfig: walletConfig,
-            setResponseUri: mockSetResponseUri,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
             walletNonce: "mock-nonce",
             networkManager: mockNetworkManager
         )

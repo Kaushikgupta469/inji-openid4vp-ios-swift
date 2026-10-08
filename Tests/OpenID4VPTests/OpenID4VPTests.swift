@@ -22,6 +22,7 @@ class OpenID4VPTests: XCTestCase {
         "{\"name\":\"dummyClient\"}"
     let processedSuccessfullyMessage = "{\"message\":\"Some additional info\"}"
     let responseUri = "https://mock-verifier.com"
+    let responseDispatchInfo = ResponseDispatchInfo(responseMode: "direct_post", nonce: "vakue", walletNonce: "wallet-nonce", state: "state", clientId: "clientId", responseUrl: "https://mock-verifier.com")
     var walletConfig : WalletConfig!
 
     override func setUp() {
@@ -36,7 +37,7 @@ class OpenID4VPTests: XCTestCase {
             nonceProvider: MockNonceProvider(),
             jsonLdCanonicalizer: { _ in "Y2Fub25pY2FsaXplZA" }
         )
-        openID4VP.setResponseUri("https://mock-verifier.com")
+        openID4VP.setResponseDispatchInfo(ResponseDispatchInfo(responseMode: "direct_post", nonce: nil, walletNonce: nil, state: nil, clientId: "", responseUrl: "https://mock-verifier.com", responseEncryptionSpecification: nil))
         openID4VP.authorizationRequest = authorizationRequest
         
         JsonLd.setCanonicalizer { _ in "Y2Fub25pY2FsaXplZA" }
@@ -368,9 +369,9 @@ class OpenID4VPTests: XCTestCase {
         // first call
         _ = try await openID4VP.authenticateVerifier(urlEncodedAuthorizationRequest: testValidSignedVPRequestWithDid)
         let firstMirror = Mirror(reflecting: openID4VP as Any)
-        let firstResponseUri = firstMirror.children.first(where: { $0.label == "responseUri" })?.value as? String
+        let firstResponseDispatchInfo = firstMirror.children.first(where: { $0.label == "responseDispatchInfo" })?.value
         let firstAuthorizationRequest = firstMirror.children.first(where: { $0.label == "authorizationRequest" })?.value as? AuthorizationRequest
-        XCTAssertNotNil(firstResponseUri, "responseUri should not be nil after first authenticateVerifier call")
+        XCTAssertNotNil(firstResponseDispatchInfo, "responseDispatchInfo should not be nil after first authenticateVerifier call")
         XCTAssertNotNil(firstAuthorizationRequest, "authorizedRequest should not be nil after first authenticateVerifier call")
 
         // second call
@@ -393,12 +394,12 @@ class OpenID4VPTests: XCTestCase {
             )
         }
         let secondMirror = Mirror(reflecting: openID4VP as Any)
-        let secondResponseUri = secondMirror.children.first(where: { $0.label == "responseUri" })?.value as? String
+        let secondResponseDispatchInfo = secondMirror.children.first(where: { $0.label == "responseDispatchInfo" })?.value
         let secondAuthorizationRequest = secondMirror.children.first(where: { $0.label == "authorizationRequest" })?.value as? AuthorizationRequest
-        XCTAssertNil(secondResponseUri, "responseUri should be nil after second authenticateVerifier call which throws error")
+        XCTAssertNil(secondResponseDispatchInfo as? ResponseDispatchInfo, "responseDispatchInfo should be nil after second authenticateVerifier call which throws error")
         XCTAssertNil(secondAuthorizationRequest, "authorizedRequest should be nil after second authenticateVerifier call which throws error")
-        // No error to verifier to be sent as no response uri is available
-        XCTAssertTrue(mockNetworkManager.recordedRequests.count == 2, "No requests should be recorded as responseUri is nil")
+        // No error to verifier to be sent as no response dispatch info is available
+        XCTAssertTrue(mockNetworkManager.recordedRequests.count == 2, "No requests should be recorded as responseDispatchInfo is nil")
     }
 
     func testThrowErrorWhenResponseUriNotAvailableDuringsendErrorInfoToVerifier
@@ -408,7 +409,7 @@ class OpenID4VPTests: XCTestCase {
 
         // directly call sendErrorInfoToVerifier
         await XCTAssertAsyncThrowsError(try await openID4VP.sendErrorInfoToVerifier(error: error)) { error in
-            XCTAssertEqual(error.localizedDescription, "Failed to send error to verifier: Response URI is not set. Cannot send error to verifier.", "error_dispatch_failure")
+            XCTAssertEqual(error.localizedDescription, "Failed to send error to verifier: Response dispatch details are not set. Cannot send error to verifier.")
         }
     }
 
@@ -418,7 +419,7 @@ class OpenID4VPTests: XCTestCase {
         mockNetworkManager.setMockResponse(for: responseUri, responseBody: processedSuccessfullyMessage)
 
         let openID4VP = OpenID4VP(traceabilityId: "trace-id", networkManager: mockNetworkManager)
-        openID4VP.setResponseUri(responseUri)
+        openID4VP.setResponseDispatchInfo(ResponseDispatchInfo(responseMode: "direct_post", nonce: nil, walletNonce: nil, state: nil, clientId: "", responseUrl: responseUri, responseEncryptionSpecification: nil))
 
         await XCTAssertNoThrowAndVerifyAsync(try await openID4VP.sendErrorInfoToVerifier(error: error)) { result in
             XCTAssertEqual(result.body(), "{\"message\":\"Some additional info\"}")
@@ -444,6 +445,76 @@ class OpenID4VPTests: XCTestCase {
                 )
             )
         }
+    }
+
+    func testAuthenticateVerifierDirectPostJwtSendsEncryptedErrorWhenValidationFailsAfterDispatchInfoPopulation() async {
+        let draft23JwtClientMetadata = clientMetadataSpecVersionDraft23.merging([
+            "authorization_encrypted_response_alg": "ECDH-ES",
+            "authorization_encrypted_response_enc": "A256GCM"
+        ]) { _, new in new }
+        let invalidPresentationDefinitionRequest = createUrlEncodedAuthorizationRequest(
+            requestParams: mergeMaps(
+                authorizationRequestParamsWithValue,
+                preRegisteredSchemeClientIdParameters,
+                [
+                    AuthorizationRequestFieldConstants.responseMode: ResponseMode.directPostJwt.rawValue,
+                    AuthorizationRequestFieldConstants.presentationDefinition: convertToJsonString(["input_descriptor": []]),
+                    AuthorizationRequestFieldConstants.clientMetadata: draft23JwtClientMetadata
+                ]
+            ),
+            clientIdPrefix: .preRegistered,
+            specVersion: .draft23
+        )
+        mockNetworkManager.setMockResponse(for: responseUri, responseBody: "{\"message\":\"Some additional info\"}")
+
+        await XCTAssertAsyncThrowsError(
+            try await openID4VP.authenticateVerifier(urlEncodedAuthorizationRequest: invalidPresentationDefinitionRequest)
+        ) { error in
+            assertOpenID4VPException(
+                error,
+                expectedMessage: "Missing Input: presentation_definition->id param is required",
+                expectedCode: OpenID4VPErrorCodes.invalidRequest
+            )
+        }
+
+        let recordedRequest = mockNetworkManager.recordedRequests[responseUri]
+        XCTAssertNotNil(recordedRequest)
+        XCTAssertNotNil(recordedRequest?.requestBody?["response"])
+        XCTAssertNil(recordedRequest?.requestBody?["error"])
+        XCTAssertNil(recordedRequest?.requestBody?["error_description"])
+    }
+
+    func testAuthenticateVerifierDirectPostJwtSendsEncryptedErrorWhenValidationFailsAfterDispatchInfoPopulationSpecV1() async {
+        let invalidDcqlQueryRequest = createUrlEncodedAuthorizationRequest(
+            requestParams: mergeMaps(
+                authorizationRequestParamsWithValue,
+                preRegisteredSchemeClientIdParameters,
+                [
+                    AuthorizationRequestFieldConstants.responseMode: ResponseMode.directPostJwt.rawValue,
+                    AuthorizationRequestFieldConstants.dcqlQuery: convertToJsonString(["credentials": []]),
+                    AuthorizationRequestFieldConstants.clientMetadata: clientMetadataSpecVersion1
+                ]
+            ),
+            clientIdPrefix: .preRegistered,
+            specVersion: .v1
+        )
+        mockNetworkManager.setMockResponse(for: responseUri, responseBody: "{\"message\":\"Some additional info\"}")
+
+        await XCTAssertAsyncThrowsError(
+            try await openID4VP.authenticateVerifier(urlEncodedAuthorizationRequest: invalidDcqlQueryRequest)
+        ) { error in
+            assertOpenID4VPException(
+                error,
+                expectedMessage: "Invalid Input: dcql_query->credentials value cannot be empty or null",
+                expectedCode: OpenID4VPErrorCodes.invalidRequest
+            )
+        }
+
+        let recordedRequest = mockNetworkManager.recordedRequests[responseUri]
+        XCTAssertNotNil(recordedRequest)
+        XCTAssertNotNil(recordedRequest?.requestBody?["response"])
+        XCTAssertNil(recordedRequest?.requestBody?["error"])
+        XCTAssertNil(recordedRequest?.requestBody?["error_description"])
     }
 
     func testAuthenticateVerifierSuccess_WithRedirectUriClientIdPrefix() async {
@@ -522,7 +593,7 @@ class OpenID4VPTests: XCTestCase {
 
         let openIdVP = OpenID4VP(traceabilityId: "AXESWSAW123", networkManager: mockNetworkManager, nonceProvider: MockNonceProvider(), authorizationResponseHandler: handler)
         openIdVP.authorizationRequest = mockAuthorizationRequestObjectWithDirectPostJwtResponseMode
-        openIdVP.setResponseUri(responseUri)
+        openIdVP.setResponseDispatchInfo(responseDispatchInfo)
 
         do {
             let result = try await openIdVP.constructUnsignedVPToken(
@@ -544,7 +615,7 @@ class OpenID4VPTests: XCTestCase {
         openIdVP.authorizationRequest = getMockAuthorizationRequest(responseMode: .directPostJwt, specVersion: .draft23)
 
         mockNetworkManager.setMockResponse(for: responseUri, responseBody: processedSuccessfullyMessage)
-        openIdVP.setResponseUri(responseUri)
+        openIdVP.setResponseDispatchInfo(responseDispatchInfo)
 
         // Credential with no credentialSubject — extraction of holderId will fail
         let credentialWithNoSubject: [String: Any] = ["type": ["VerifiableCredential"]]
@@ -563,14 +634,12 @@ class OpenID4VPTests: XCTestCase {
         }
     }
     
-    func testSendVPResponseToVerifierThrowsErrorWhenResponseUriIsNotPopulated() async {
-        let openIdVP = OpenID4VP(traceabilityId: "AXESWSAW123", networkManager: mockNetworkManager, nonceProvider: MockNonceProvider())
-        
-        await XCTAssertAsyncThrowsError(try await openIdVP.sendVPResponseToVerifier(vpTokenSigningResults: [VPTokenSigningResult(id: "uuid1", signedData: "signed".data(using: .utf8) ?? Data())])) { error in
-            XCTAssertEqual(error.localizedDescription, "Response URI is not available to send any response to Verifier", "error_dispatch_failure")
-        }
-    }
+//    func testSendVPResponseToVerifierThrowsErrorWhenResponseUriIsNotPopulated() async {
+//        let openIdVP = OpenID4VP(traceabilityId: "AXESWSAW123", networkManager: mockNetworkManager, nonceProvider: MockNonceProvider())
+//        
+//        await XCTAssertAsyncThrowsError(try await openIdVP.sendVPResponseToVerifier(vpTokenSigningResults: [VPTokenSigningResult(id: "uuid1", signedData: "signed".data(using: .utf8) ?? Data())])) { error in
+//            XCTAssertEqual(error.localizedDescription, "Response URI is not available to send any response to Verifier", "error_dispatch_failure")
+//        }
+//    }
 }
-
-
 

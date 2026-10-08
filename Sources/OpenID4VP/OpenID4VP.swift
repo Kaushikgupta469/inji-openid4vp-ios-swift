@@ -4,7 +4,7 @@ public class OpenID4VP {
     public let traceabilityId: String
     let networkManager: NetworkManaging
     var authorizationRequest: AuthorizationRequest!
-    private var responseUri: String?
+    private var responseDispatchInfo: ResponseDispatchInfo?
     private var authorizationResponseHandler: AuthorizationResponseHandler
     private let walletConfig: WalletConfig
     private var walletNonce: String = ""
@@ -33,9 +33,9 @@ public class OpenID4VP {
         self.walletConfig = walletConfig
         OpenID4VPException.setTraceabilityId(className: String(describing: type(of: self)), traceabilityId: traceabilityId)
     }
-
-    internal func setResponseUri(_ responseUri: String) {
-        self.responseUri = responseUri
+    
+    internal func setResponseDispatchInfo(_ responseDispatchInfo: ResponseDispatchInfo) {
+        self.responseDispatchInfo = responseDispatchInfo
     }
     
     public func authenticateVerifier(
@@ -44,14 +44,14 @@ public class OpenID4VP {
         // Create a new wallet nonce for each request
         walletNonce = nonceProvider.generateNonce()
         authorizationRequest = nil
-        responseUri = nil
+        responseDispatchInfo = nil
         authorizationResponseHandler = AuthorizationResponseHandler(networkManager: networkManager, walletConfig: walletConfig)
 
         do {
             authorizationRequest = try await AuthorizationRequest.validateAndCreateAuthorizationRequest(
                 urlEncodedAuthorizationRequest: urlEncodedAuthorizationRequest,
                 walletConfig: walletConfig,
-                setResponseUri: setResponseUri,
+                setResponseDispatchInfo: setResponseDispatchInfo,
                 walletNonce: walletNonce,
                 networkManager: networkManager
             )
@@ -69,13 +69,13 @@ public class OpenID4VP {
         do {
             walletNonce = nonceProvider.generateNonce()
             self.authorizationRequest = nil
-            responseUri = nil
+            responseDispatchInfo = nil
             authorizationResponseHandler = AuthorizationResponseHandler(networkManager: networkManager, walletConfig: walletConfig)
 
             let validatedAuthorizationRequest = try await AuthorizationRequest.validateAndCreateAuthorizationRequest(
                 authRequest: authorizationRequest,
                 walletConfig: walletConfig,
-                setResponseUri: setResponseUri,
+                setResponseDispatchInfo: setResponseDispatchInfo,
                 walletNonce: walletNonce,
                 networkManager: networkManager
             )
@@ -116,41 +116,42 @@ public class OpenID4VP {
     public func constructVPResponse(vpTokenSigningResults: [VPTokenSigningResult]) -> [String: Any] {
         do {
             return try authorizationResponseHandler.constructVPResponse(
-                signingResults: vpTokenSigningResults, authorizationRequest: authorizationRequest
+                signingResults: vpTokenSigningResults,
+                authorizationRequest: authorizationRequest,
+                dispatchInfo: responseDispatchInfo
             )
         } catch let exception {
             return constructErrorInfo(exception: exception)
         }
     }
 
-    public func constructErrorInfo(exception: Error) -> [String: Any] {
-        return authorizationResponseHandler.constructAuthorizationErrorResponse(
-            authorizationRequest: authorizationRequest,
-            exception: exception,
-            walletNonce: walletNonce
-        )
-    }
-
     public func sendVPResponseToVerifier(
         vpTokenSigningResults: [VPTokenSigningResult]
     ) async throws -> VerifierResponse {
         do {
-            guard let responseUri = responseUri else {
-                throw UnsupportedOperationException(message: "Response URI is not available to send any response to Verifier", className: className)
-            }
             return try await authorizationResponseHandler.constructAndSendAuthorizationResponseToVerifier(
                 authorizationRequest: authorizationRequest,
                 vpTokenSigningResults: vpTokenSigningResults,
-                responseUri: responseUri
+                dispatchInfo: responseDispatchInfo
             )
         } catch {
              await safeSendError(error: error)
             throw error
         }
     }
+    
+    public func constructErrorInfo(exception: Error) -> [String: Any] {
+        return authorizationResponseHandler.constructAuthorizationErrorResponse(
+            dispatchInfo: responseDispatchInfo,
+            error: exception,
+            walletNonce: walletNonce,
+            authorizationRequest: authorizationRequest
+        )
+    }
 
     public func sendErrorInfoToVerifier(error: Error) async throws -> VerifierResponse {
-        return try await authorizationResponseHandler.sendAuthorizationError(responseUri: responseUri, authorizationRequest: authorizationRequest, error: error)
+        return try await authorizationResponseHandler.sendAuthorizationError(dispatchInfo: responseDispatchInfo, authorizationRequest: authorizationRequest, error: error)
+        
     }
 
     private func safeSendError(error: Error) async {

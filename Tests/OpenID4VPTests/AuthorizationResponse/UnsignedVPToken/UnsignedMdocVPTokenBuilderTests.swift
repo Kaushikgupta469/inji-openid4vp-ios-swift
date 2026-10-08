@@ -28,7 +28,7 @@ final class UnsignedMdocVPTokenBuilderTests: XCTestCase {
         // Payload map is keyed by the UUID identifier (one entry per credential)
         XCTAssertEqual(payloadMap.count, 1)
         let bytes = try XCTUnwrap(payloadMap[identifier])
-        XCTAssertTrue(bytes.hasPrefix("d8"), "Expected CBOR-tagged hex starting with 'd8', got: \(bytes.prefix(4))")
+        XCTAssertTrue(bytes.hasPrefix("846a"), "Expected CBOR-tagged hex starting with '846a', got: \(bytes.prefix(4))")
 
         XCTAssertEqual(unsignedVPTokens.count, 1)
         XCTAssertEqual(unsignedVPTokens[0].format, .mso_mdoc)
@@ -54,7 +54,7 @@ final class UnsignedMdocVPTokenBuilderTests: XCTestCase {
 
         XCTAssertEqual(payloadMap.count, 1)
         let bytes = try XCTUnwrap(payloadMap[identifier])
-        XCTAssertTrue(bytes.hasPrefix("d8"), "Expected CBOR-tagged hex starting with 'd8', got: \(bytes.prefix(4))")
+        XCTAssertTrue(bytes.hasPrefix("846a"), "Expected CBOR-tagged hex starting with '846a', got: \(bytes.prefix(4))")
 
         XCTAssertEqual(unsignedVPTokens.count, 1)
         XCTAssertEqual(unsignedVPTokens[0].format, .mso_mdoc)
@@ -170,11 +170,11 @@ final class UnsignedMdocVPTokenBuilderTests: XCTestCase {
 
         XCTAssertEqual(payloadMap.count, 1)
         let bytes = try XCTUnwrap(payloadMap[identifier])
-        XCTAssertTrue(bytes.hasPrefix("d8"), "Expected CBOR-tagged hex starting with 'd8', got: \(bytes.prefix(4))")
+        XCTAssertTrue(bytes.hasPrefix("846a"), "Expected CBOR-tagged hex starting with '846a', got: \(bytes.prefix(4))")
 
         XCTAssertEqual(unsignedVPTokens.count, 1)
         XCTAssertEqual(unsignedVPTokens[0].format, .mso_mdoc)
-        XCTAssertEqual(String(decoding: unsignedVPTokens[0].dataToSign, as: UTF8.self), bytes)
+        XCTAssertEqual(unsignedVPTokens[0].dataToSign.map { String(format: "%02x", $0) }.joined(), bytes)
         XCTAssertEqual(unsignedVPTokens[0].id, identifier)
     }
 
@@ -196,11 +196,11 @@ final class UnsignedMdocVPTokenBuilderTests: XCTestCase {
 
         XCTAssertEqual(payloadMap.count, 1)
         let bytes = try XCTUnwrap(payloadMap[identifier])
-        XCTAssertTrue(bytes.hasPrefix("d8"), "Expected CBOR-tagged hex starting with 'd8', got: \(bytes.prefix(4))")
+        XCTAssertTrue(bytes.hasPrefix("846a"), "Expected CBOR-tagged hex starting with '846a', got: \(bytes.prefix(4))")
 
         XCTAssertEqual(unsignedVPTokens.count, 1)
         XCTAssertEqual(unsignedVPTokens[0].format, .mso_mdoc)
-        XCTAssertEqual(String(decoding: unsignedVPTokens[0].dataToSign, as: UTF8.self), bytes)
+        XCTAssertEqual(unsignedVPTokens[0].dataToSign.map { String(format: "%02x", $0) }.joined(), bytes)
         XCTAssertEqual(unsignedVPTokens[0].id, identifier)
     }
 
@@ -314,7 +314,59 @@ final class UnsignedMdocVPTokenBuilderTests: XCTestCase {
         let identifier = try XCTUnwrap(mappings[0].identifier)
         let expectedBytes = try XCTUnwrap(payloadMap[identifier])
         // The unsigned token's dataToSign must match the payload bytes for its identifier
-        XCTAssertEqual(String(decoding: unsignedVPTokens[0].dataToSign, as: UTF8.self), expectedBytes)
+        XCTAssertEqual(unsignedVPTokens[0].dataToSign.map { String(format: "%02x", $0) }.joined(), expectedBytes)
+        XCTAssertEqual(unsignedVPTokens[0].id, identifier)
+    }
+
+    // MARK: - // VCI 1.0 compliant mDoc - DeviceSigned structure
+
+    func testCreationOfUnsignedMdocVPTokenWithFormat1Mdoc() async throws {
+        let builder = try UnsignedMdocVPTokenBuilder(
+            authorizationRequest: getMockAuthorizationRequest(specVersion: .v1),
+            specVersion: .v1,
+            mdocGeneratedNonce: "mock-nonce"
+        )
+        var mappings = [
+            CredentialInputDescriptorMapping(format: .mso_mdoc, credential: AnyCodable(sampleMdocFormat1), inputDescriptorId: "id-1")
+        ]
+
+        let (payload, unsignedVPTokens) = try await builder.build(credentialInputDescriptorMappings: &mappings)
+
+        let payloadMap = try XCTUnwrap(payload as? [String: String])
+        let identifier = try XCTUnwrap(mappings[0].identifier)
+        XCTAssertTrue(identifier.hasPrefix("urn:uuid:"), "Expected UUID identifier, got: \(identifier)")
+
+        XCTAssertEqual(payloadMap.count, 1)
+        XCTAssertNotNil(payloadMap[identifier])
+        XCTAssertFalse(payloadMap[identifier]!.isEmpty)
+
+        XCTAssertEqual(unsignedVPTokens.count, 1)
+        XCTAssertEqual(unsignedVPTokens[0].format, .mso_mdoc)
+        XCTAssertEqual(unsignedVPTokens[0].id, identifier)
+    }
+
+    func testDcqlBuildWithFormat1Mdoc() async throws {
+        let builder = try UnsignedMdocVPTokenBuilder(
+            authorizationRequest: getMockAuthorizationRequest(specVersion: .v1),
+            specVersion: .v1,
+            mdocGeneratedNonce: "mock-nonce"
+        )
+        var mappings = [
+            CredentialToCredentialQueryIdMapping(format: .mso_mdoc, credential: AnyCodable(sampleMdocFormat1), credentialQueryId: "q1")
+        ]
+
+        let (payload, unsignedVPTokens) = try await builder.build(credentialToCredentialQueryIdMappings: &mappings)
+
+        let payloadMap = try XCTUnwrap(payload as? [String: String])
+        let identifier = try XCTUnwrap(mappings[0].identifier)
+        XCTAssertTrue(identifier.hasPrefix("urn:uuid:"), "Expected UUID identifier, got: \(identifier)")
+
+        XCTAssertEqual(payloadMap.count, 1)
+        XCTAssertNotNil(payloadMap[identifier])
+        XCTAssertFalse(payloadMap[identifier]!.isEmpty)
+
+        XCTAssertEqual(unsignedVPTokens.count, 1)
+        XCTAssertEqual(unsignedVPTokens[0].format, .mso_mdoc)
         XCTAssertEqual(unsignedVPTokens[0].id, identifier)
     }
 }

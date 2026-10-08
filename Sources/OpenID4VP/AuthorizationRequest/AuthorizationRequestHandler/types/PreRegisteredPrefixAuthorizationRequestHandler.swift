@@ -7,14 +7,14 @@ class PreRegisteredSchemeAuthorizationRequestHandler:  ClientIdPrefixBasedAuthor
          specVersion: SpecVersion,
          authorizationRequestParameters: [String: Any],
          walletConfig: WalletConfig,
-         setResponseUri: @escaping (String) -> Void,
+         setResponseDispatchInfo: @escaping (ResponseDispatchInfo) -> Void,
          walletNonce: String,
          networkManager: NetworkManaging) {
         super.init(clientId: clientId,
                    specVersion: specVersion,
                    authorizationRequestParameters: authorizationRequestParameters,
                    walletConfig: walletConfig,
-                   setResponseUri: setResponseUri,
+                   setResponseDispatchInfo: setResponseDispatchInfo,
                    walletNonce: walletNonce,
                    networkManager: networkManager)
         delegate = self
@@ -27,7 +27,7 @@ class PreRegisteredSchemeAuthorizationRequestHandler:  ClientIdPrefixBasedAuthor
     
     override func validateClientId() throws {
         if walletConfig.validateTrustedVerifier {
-            guard walletConfig.trustedVerifiers.contains(where: { $0.clientId == authorizationRequestParameters[AuthorizationRequestFieldConstants.clientId] as? String }) else {
+            guard walletConfig.trustedVerifiers.contains(where: { $0.clientId == super.clientId }) else {
                 throw InvalidVerifier(message: "Verifier is not trusted by the wallet", className: className)
             }
         }
@@ -46,17 +46,14 @@ class PreRegisteredSchemeAuthorizationRequestHandler:  ClientIdPrefixBasedAuthor
     
     func isUnsignedRequestSupported() throws -> Bool {
         if walletConfig.validateTrustedVerifier {
-            let clientId = getStringValue(authorizationRequestParameters[AuthorizationRequestFieldConstants.clientId]) ?? ""
-            let preRegisteredVerifier = try verifier(clientId: clientId)
+            let preRegisteredVerifier = try verifier(clientId: super.clientId)
             return preRegisteredVerifier.allowUnsignedRequest
         }
         return true
     }
     
     func extractPublicKey(keyId: String?, algorithm: String) async throws -> PublicKeyType {
-        let clientId = authorizationRequestParameters[AuthorizationRequestFieldConstants.clientId] as? String
-        
-        let preRegisteredClient = try verifier(clientId: clientId ?? "")
+        let preRegisteredClient = try verifier(clientId: super.clientId)
         if let jwksUri = preRegisteredClient.jwksUri {
             let jwkSet : JWKSet = try await resolveJwksFromUri(jwksUri, networkManager: self.networkManager, className: className)
             
@@ -71,12 +68,13 @@ class PreRegisteredSchemeAuthorizationRequestHandler:  ClientIdPrefixBasedAuthor
         }
     }
     
-    override func validateAndParseRequestFields() async throws {
+    func validateClientAuthenticity() throws {
         if walletConfig.validateTrustedVerifier {
-            let clientId = authorizationRequestParameters[AuthorizationRequestFieldConstants.clientId] as! String
-            let preRegisteredClient = try verifier(clientId: clientId)
+            let preRegisteredClient = try verifier(clientId: super.clientId)
             
-            let responseUri = getStringValue(authorizationRequestParameters[AuthorizationRequestFieldConstants.responseUri]) ?? "null"
+            guard let responseUri = getStringValue(authorizationRequestParameters[AuthorizationRequestFieldConstants.responseUri]) else {
+                throw MissingInput(fieldPath: "response_uri", className: className, notifyVerifier: false)
+            }
             guard preRegisteredClient.responseUris.contains(responseUri) else {
                 throw InvalidVerifier(
                     message: "response_uri trust cannot be established",
@@ -85,7 +83,6 @@ class PreRegisteredSchemeAuthorizationRequestHandler:  ClientIdPrefixBasedAuthor
             }
             
         }
-        try await super.validateAndParseRequestFields()
     }
     
     private func filterAndExtractKey(jwks publicKeys: JWKSet, keyId: String?, algorithm: String) throws -> JWK {

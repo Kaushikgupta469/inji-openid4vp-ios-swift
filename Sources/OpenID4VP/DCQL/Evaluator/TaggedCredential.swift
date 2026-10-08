@@ -9,6 +9,8 @@ struct W3cTaggedCredential: TaggedCredential {
     let credentialFormat: FormatType
     let hasCryptographicHolderBinding: Bool
     let types: [String]
+    let holderId: String?
+    let isVcdm2: Bool
 }
 
 struct MdocTaggedCredential: TaggedCredential {

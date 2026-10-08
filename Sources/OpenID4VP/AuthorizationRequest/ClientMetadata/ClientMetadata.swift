@@ -39,7 +39,13 @@ public struct ClientMetadata: Codable {
             self.clientName = try container.decodeIfPresent(String.self, forKey: .clientName)
             self.logoUri = try container.decodeIfPresent(String.self, forKey: .logoUri)
             self.encryptedResponseEncValuesSupported = try container.decodeIfPresent([String].self, forKey: .encryptedResponseEncValuesSupported)
-            self.jwks = try container.decodeIfPresent(JWKSet.self, forKey: .jwks)
+            self.jwks = try container.decodeRequired(
+                LenientJWKSet.self,
+                forKey: .jwks,
+                fieldPath: ["client_metadata", "jwks"],
+                className: ClientMetadata.className,
+                isMandatory: false
+            )?.jwkSet
 
             let vpFormatsContainer = try container.nestedContainer(keyedBy: VPFormatType.self, forKey: .vpFormatsSupported)
             var decodedFormats: [String: VPFormatSupported] = [:]

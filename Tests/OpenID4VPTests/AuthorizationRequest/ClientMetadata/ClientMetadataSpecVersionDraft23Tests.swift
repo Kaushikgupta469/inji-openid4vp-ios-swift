@@ -2,6 +2,34 @@ import XCTest
 @testable import OpenID4VP
 
 final class ClientMetadataSpecVersionDraft23Tests: XCTestCase {
+
+    private let mixedJwks = """
+    {
+        "keys": [
+            {
+                "kty": "EC",
+                "use": "enc",
+                "alg": "ECDH-ES",
+                "kid": "valid-enc-key",
+                "crv": "P-256",
+                "x": "gI0GAILBdu7T53akrFmMyGcsF3n5dO7MmwNBHKW5SV0",
+                "y": "SLW_xSffzlPWrHEVI30DHM_4egVwt3NQqeUD7nMFpps"
+            },
+            {
+                "kty": "AKP",
+                "alg": "ML-KEM-9999",
+                "use": "enc",
+                "kid": "post-quantum-key"
+            },
+            {
+                "kty": "OIDF-CONFORMANCE-UNSUPPORTED",
+                "use": "enc",
+                "kid": "unsupported-key"
+            }
+        ]
+    }
+    """
+
     func testThrowErrorOnValidationOfInvalidClientMetadataNew() {
             let testCases: [TestCase] = [
                 TestCase(
@@ -139,5 +167,23 @@ final class ClientMetadataSpecVersionDraft23Tests: XCTestCase {
         for testCase in testCases {
             XCTAssertNoThrow(try ClientMetadataDraft23.deserializeAndValidate(clientMetadata: testCase.input))
         }
+    }
+
+    func testDraft23IgnoresUnusableEncryptionKeys() throws {
+        let input = """
+        {
+            "client_name": "Test Client",
+            "logo_uri": "https://example.com/logo.png",
+            "authorization_encrypted_response_alg": "ECDH-ES",
+            "authorization_encrypted_response_enc": "A256GCM",
+            "vp_formats": { "ldp_vp": { "proof_type_values": ["Ed25519Signature2020"] } },
+            "jwks": \(mixedJwks)
+        }
+        """.data(using: .utf8)!
+
+        let metadata = try ClientMetadataDraft23.deserializeAndValidate(clientMetadata: input)
+
+        XCTAssertEqual(metadata.jwks?.keys.count, 1)
+        XCTAssertEqual(metadata.jwks?.keys.first?.keyID, "valid-enc-key")
     }
 }

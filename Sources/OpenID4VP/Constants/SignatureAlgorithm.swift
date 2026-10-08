@@ -1,6 +1,7 @@
 import Foundation
 
 public enum SignatureSuite: String, CaseIterable, Codable {
+    case dataIntegrityProof = "DataIntegrityProof"
     case ed25519Signature2020 = "Ed25519Signature2020"
     case jsonWebSignature2020 = "JsonWebSignature2020"
     case ed25519Signature2018 = "Ed25519Signature2018"

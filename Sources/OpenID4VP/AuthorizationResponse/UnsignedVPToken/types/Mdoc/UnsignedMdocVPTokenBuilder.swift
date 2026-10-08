@@ -21,7 +21,9 @@ struct UnsignedMdocVPTokenBuilder: UnsignedVPTokenBuilder {
         self.authorizationRequest = authorizationRequest
         self.specVersion = specVersion
         self.walletConfig = walletConfig
-        self.responseUri = try ResponseModeBasedHandlerFactory.get(responseMode: authorizationRequest.responseMode).getResponseEndpoint(authorizationRequest: authorizationRequest)
+        self.responseUri = try ResponseModeBasedHandlerFactory
+            .get(responseMode: authorizationRequest.responseMode)
+            .getResponseEndpoint(authorizationRequest: authorizationRequest)
         self.mdocGeneratedNonce = mdocGeneratedNonce
     }
     
@@ -47,7 +49,7 @@ struct UnsignedMdocVPTokenBuilder: UnsignedVPTokenBuilder {
                 },
                 existingDocTypes: &existingDocTypes
             )
-            
+
             unsignedVPTokens.append(unsignedVPToken)
         }
         
@@ -112,7 +114,8 @@ struct UnsignedMdocVPTokenBuilder: UnsignedVPTokenBuilder {
     ) async throws -> (docType: String, deviceAuthenticationBytes: String, unsignedVPToken: UnsignedVPToken) {
         let (mdocCredential, decodedMdocCredential) = try decodeMdoc(credential, className: Self.className)
         
-        let (docType, docTypeString) = try extractMdocDocType(from: decodedMdocCredential, className: Self.className)
+        let issuerSigned = try getIssuerSigned(from: decodedMdocCredential, className: Self.className)
+        let (_, docTypeString) = try extractMdocDocType(from: issuerSigned, className: Self.className)
         
         if existingDocTypes.contains(docTypeString) {
             throw InvalidData(
@@ -125,18 +128,19 @@ struct UnsignedMdocVPTokenBuilder: UnsignedVPTokenBuilder {
         let deviceAuthentication = CBOR.array([
             .utf8String("DeviceAuthentication"),
             sessionTranscript,
-            docType,
+            .utf8String(docTypeString),
             deviceNamespacesBytes
         ])
         
         let wrapped = wrapCBORInputWithTag24(input: deviceAuthentication)!
-        let dataToSign = cborToByteString(cbor: wrapped)
+        let deviceAuthenticationBytes = cborEncode(wrapped)
+        let (keyRef, alg) = try resolveMdocKeyAndAlg(mdocCredential)
+        let signature1Bytes = try CoseSignature1Utils.createSignature1Structure(payload: deviceAuthenticationBytes, alg: alg)
+        let dataToSign = signature1Bytes.map { String(format: "%02x", $0) }.joined()
         let identifier = UUIDGenerator.generateUUID()
         
         updateIdentifier(identifier)
         uuidToDeviceAuthenticationBytes[identifier] = dataToSign
-        
-        let (keyRef, alg) = try resolveMdocKeyAndAlg(mdocCredential)
         
         return (
             docTypeString,
@@ -146,7 +150,7 @@ struct UnsignedMdocVPTokenBuilder: UnsignedVPTokenBuilder {
                 format: .mso_mdoc,
                 holderKeyReference: keyRef,
                 signatureAlgorithm: alg,
-                dataToSign: Data(dataToSign.utf8)
+                dataToSign: Data(signature1Bytes)
             )
         )
     }
@@ -181,11 +185,12 @@ struct UnsignedMdocVPTokenBuilder: UnsignedVPTokenBuilder {
                     thumbprintCBOR,
                     .utf8String(responseUri)
                 ])
+                
                 let openId4VPHandoverInfoBytes: [UInt8] = openId4VPHandoverInfo.encode()
                 let handoverInfoHash = CBOR.byteString([UInt8](Data(SHA256.hash(data: Data(openId4VPHandoverInfoBytes)))))
+                
                 return CBOR.array([.utf8String("OpenID4VPHandover"), handoverInfoHash])
             }
         }
     }
 }
-

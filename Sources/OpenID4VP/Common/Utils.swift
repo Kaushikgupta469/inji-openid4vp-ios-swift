@@ -171,21 +171,25 @@ func resolveMdocKeyAndAlg(_ mdocCredential: String) throws -> (keyRef: String, a
     }
     
     var decoded = try CBORDecoder(input: [UInt8](data)).decodeItem()
-    
-    
-    guard case let CBOR.map(rootMap)? = decoded,
-          let issuerSigned = rootMap[CBOR.utf8String("issuerSigned")],
-          case let CBOR.map(issuerSignedMap) = issuerSigned else {
-        throw InvalidData(message: "issuerSigned missing", className: "OpenID4VPUtils")
+    guard let decodedMdoc = decoded else {
+        throw InvalidData(
+            message: "Invalid base64url mdoc credential",
+            className: "OpenID4VPUtils"
+        )
     }
     
+    let issuerSigned = try getIssuerSigned(from: decodedMdoc, className: "OpenID4VPUtils")
+    guard case let CBOR.map(issuerSignedMap) = issuerSigned else {
+        throw InvalidData(message: "issuerSigned is not a map", className: "OpenID4VPUtils")
+    }
+
     
     guard let issuerAuth = issuerSignedMap[CBOR.utf8String("issuerAuth")],
-          case let CBOR.array(issuerAuthArray) = issuerAuth,
-          issuerAuthArray.count > 2,
-          case let CBOR.byteString(payloadBytes) = issuerAuthArray[2] else {
-        throw InvalidData(message: "issuerAuth payload missing", className: "OpenID4VPUtils")
-    }
+              case let CBOR.array(issuerAuthArray) = issuerAuth,
+              issuerAuthArray.count > 2,
+              case let CBOR.byteString(payloadBytes) = issuerAuthArray[2] else {
+            throw InvalidData(message: "issuerAuth payload missing", className: "OpenID4VPUtils")
+        }
     
     
     decoded = try CBORDecoder(input: payloadBytes).decodeItem()
@@ -391,4 +395,3 @@ func serializeJwkToJson(_ jwk: [String: Any]) throws -> String {
     }
     return jsonString
 }
-

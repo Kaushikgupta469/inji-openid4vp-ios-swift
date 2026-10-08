@@ -1,7 +1,7 @@
 
 import Foundation
 
-public class AuthorizationResponseHandler {
+class AuthorizationResponseHandler {
     private let networkManager: NetworkManaging
     private var walletNonce: String = ""
     private var formatToCredentialInputDescriptorMapping: [FormatType: [CredentialInputDescriptorMapping]] = [:]
@@ -11,9 +11,9 @@ public class AuthorizationResponseHandler {
     private var specVersion: SpecVersion = .v1
     private let walletConfig: WalletConfig
     
-    public static let className = String(describing: AuthorizationResponseHandler.self)
+    static let className = String(describing: AuthorizationResponseHandler.self)
     
-    public init(networkManager: NetworkManaging, walletConfig: WalletConfig) {
+    init(networkManager: NetworkManaging, walletConfig: WalletConfig) {
         self.networkManager = networkManager
         self.walletConfig = walletConfig
     }
@@ -33,7 +33,8 @@ public class AuthorizationResponseHandler {
     
     func constructVPResponse(
         signingResults: [VPTokenSigningResult],
-        authorizationRequest: AuthorizationRequest
+        authorizationRequest: AuthorizationRequest,
+        dispatchInfo: ResponseDispatchInfo?
     ) throws -> [String: String] {
         do {
             let authorizationResponse = try createAuthorizationResponse(
@@ -44,26 +45,29 @@ public class AuthorizationResponseHandler {
                 )
             )
             
+            guard let dispatchInfo = dispatchInfo else {
+                throw ErrorDispatchFailure(message: "Response dispatch details are not set. Cannot construct VP response.", className: Self.className)
+            }
+            
+            
             return try ResponseModeBasedHandlerFactory
-                .get(responseMode: authorizationRequest.responseMode)
+                .get(responseMode: dispatchInfo.responseMode)
                 .getAuthorizationResponse(
-                    authorizationRequest: authorizationRequest,
+                    dispatchInfo: dispatchInfo,
                     authorizationResponse: authorizationResponse,
-                    walletNonce: walletNonce,
-                    walletConfig: walletConfig
+                    authorizationRequest: authorizationRequest
                 )
+            
         } catch {
             throw AuthorizationResponseConstructionFailure(cause: error, className: Self.className)
         }
     }
     
-    func sendAuthorizationError(responseUri: String?, authorizationRequest: AuthorizationRequest?, error: Error) async throws -> VerifierResponse {
-        guard let responseUri = responseUri, !responseUri.isEmpty else {
-            throw ErrorDispatchFailure(message: "Response URI is not set. Cannot send error to verifier.", className: Self.className)
+    func sendAuthorizationError(dispatchInfo: ResponseDispatchInfo?, authorizationRequest: AuthorizationRequest?, error: Error) async throws -> VerifierResponse {
+        guard let dispatchInfo = dispatchInfo else {
+            throw ErrorDispatchFailure(message: "Response dispatch details are not set. Cannot send error to verifier.", className: Self.className)
         }
-        
-        var errorPayload: [String: String] = [:]
-        
+    
         let resolvedError: OpenID4VPException
         if let openidError = error as? OpenID4VPException {
             resolvedError = openidError
@@ -74,21 +78,12 @@ public class AuthorizationResponseHandler {
             )
         }
         
-        errorPayload.merge(resolvedError.toErrorResponse()) { _, new in new }
-        
-        if let state = authorizationRequest?.state, !state.isEmpty {
-            errorPayload["state"] = state
-        }
+        let authorizationErrorResponse = resolvedError.toAuthorizationErrorResponse(state: dispatchInfo.state)
+        let responseModeHandler = try ResponseModeBasedHandlerFactory.get(responseMode: dispatchInfo.responseMode)
         
         do {
-            let dispatchResult = try await networkManager.sendHTTPRequest(
-                url: responseUri,
-                method: .post,
-                bodyParams: errorPayload,
-                headers: [Header.contentType.rawValue: ContentTypes.applicationFormUrlEncoded.rawValue]
-            )
-            let verifierResponse: VerifierResponse = toVerifierResponse(dispatchResult)
-            
+            let networkResponse = try await responseModeHandler.sendAuthorizationError(dispatchInfo: dispatchInfo, authorizationResponse: authorizationErrorResponse, authorizationRequest: authorizationRequest, networkManager: networkManager)
+            let verifierResponse = toVerifierResponse(networkResponse)
             (error as? OpenID4VPException)?.setVerifierResponse(verifierResponse)
             return verifierResponse
         } catch {
@@ -102,10 +97,13 @@ public class AuthorizationResponseHandler {
     func constructAndSendAuthorizationResponseToVerifier(
         authorizationRequest: AuthorizationRequest,
         vpTokenSigningResults: [VPTokenSigningResult],
-        responseUri: String
+        dispatchInfo: ResponseDispatchInfo?
     ) async throws -> VerifierResponse {
         let authorizationResponse : AuthorizationResponse
         do {
+            if dispatchInfo == nil {
+                throw ErrorDispatchFailure(message: "Response dispatch details are not set. Cannot send authorization response to verifier.", className: Self.className)
+            }
             let reconstructedVpTokenSigningResult : [FormatType : [VPTokenSigningResult]] = try constructSigningResults(
                 unsignedVPTokenResults: unsignedVPTokenResults,
                 signingResults: vpTokenSigningResults
@@ -120,9 +118,9 @@ public class AuthorizationResponseHandler {
         }
         
         let response: NetworkResponse = try await sendAuthorizationResponse(
-            authorizationRequest: authorizationRequest,
+            dispatchInfo: dispatchInfo!,
             authorizationResponse: authorizationResponse,
-            responseUri: responseUri
+            authorizationRequest: authorizationRequest
         )
         return toVerifierResponse(response)
     }
@@ -222,33 +220,31 @@ public class AuthorizationResponseHandler {
     }
     
     func constructAuthorizationErrorResponse(
-        authorizationRequest: AuthorizationRequest?,
-        exception: Error,
-        walletNonce: String
+        dispatchInfo: ResponseDispatchInfo?,
+        error: Error,
+        walletNonce: String,
+        authorizationRequest: AuthorizationRequest? = nil
     ) -> [String: Any] {
-        self.walletNonce = walletNonce
         
-        let authorizationResponse: AuthorizationErrorResponse
         
-        if let openIDException = exception as? OpenID4VPException {
-            authorizationResponse = openIDException.toAuthorizationErrorResponse(state: authorizationRequest?.state)
+        let resolvedError: OpenID4VPException
+        if let openidError = error as? OpenID4VPException {
+            resolvedError = openidError
         } else {
-            let genericException = GenericFailure(
-                message: exception.localizedDescription.isEmpty ? "Unknown internal error" : exception.localizedDescription,
+            resolvedError = GenericFailure(
+                message: error.localizedDescription.isEmpty ? "Unknown internal error" : error.localizedDescription,
                 className: String(describing: OpenID4VP.self)
             )
-            authorizationResponse = genericException.toAuthorizationErrorResponse(state: authorizationRequest?.state)
         }
-        
         do {
-            return try ResponseModeBasedHandlerFactory
-                .get(responseMode: authorizationRequest?.responseMode ?? ResponseMode.directPost.rawValue)
-                .getAuthorizationErrorResponse(
-                    authorizationRequest: authorizationRequest,
-                    authorizationResponse: authorizationResponse,
-                    walletNonce: self.walletNonce
-                )
-        } catch {
+            guard let dispatchInfo = dispatchInfo else {
+                throw ErrorDispatchFailure(message: "Response dispatch details are not set. Cannot send error to verifier.", className: Self.className)
+            }
+            let authorizationErrorResponse = resolvedError.toAuthorizationErrorResponse(state: dispatchInfo.state)
+            let responseModeHandler = try ResponseModeBasedHandlerFactory.get(responseMode: dispatchInfo.responseMode)
+            
+            return try responseModeHandler.getAuthorizationErrorResponse(dispatchInfo: dispatchInfo, authorizationResponse: authorizationErrorResponse, authorizationRequest: authorizationRequest)
+        }  catch {
             OpenID4VPException.error(error, className: Self.className)
             return [
                 "error": "invalid_request",
@@ -261,6 +257,7 @@ public class AuthorizationResponseHandler {
         authorizationRequest: AuthorizationRequest,
         vpTokenSigningResults: [FormatType: [VPTokenSigningResult]]
     ) throws -> AuthorizationResponse {
+        
         
         switch authorizationRequest.responseType {
         case ResponseType.vp_token.rawValue:
@@ -364,19 +361,16 @@ public class AuthorizationResponseHandler {
     }
     
     private func sendAuthorizationResponse(
-        authorizationRequest: AuthorizationRequest,
+        dispatchInfo: ResponseDispatchInfo,
         authorizationResponse: AuthorizationResponse,
-        responseUri: String
+        authorizationRequest: AuthorizationRequest
     ) async throws -> NetworkResponse {
-        return try await ResponseModeBasedHandlerFactory.get(responseMode: authorizationRequest.responseMode)
+        return try await ResponseModeBasedHandlerFactory.get(responseMode: dispatchInfo.responseMode)
             .sendAuthorizationResponse(
-                authorizationRequest: authorizationRequest,
+                dispatchInfo: dispatchInfo,
                 authorizationResponse: authorizationResponse,
-                url: responseUri,
-                networkManager: networkManager,
-                producerInfo: walletNonce,
-                recipientInfo: authorizationRequest.nonce,
-                walletConfig: walletConfig
+                authorizationRequest: authorizationRequest,
+                networkManager: networkManager
             )
     }
     

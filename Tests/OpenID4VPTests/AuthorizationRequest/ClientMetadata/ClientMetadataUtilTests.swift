@@ -58,18 +58,6 @@ final class ClientMetadataUtilTests: XCTestCase {
         }
     }
     
-    // In case of response mode direct_post_jwt, client_metadata is mandatory as the response will be signed which required shared key information available in client_metadata.
-    func testParsingOfClientMetadataThrowErrorWhenClientMetadataNotPresentAndResponseModeIsDirectPostJwt() throws {
-        let authorizationRequest = createAuthorizationRequest(responseMode: ResponseMode.directPostJwt.rawValue)
-        
-        XCTAssertThrowsError(try ClientMetadataSpecVersionHandler.of(.draft23).parseAndValidate(authorizationRequest: authorizationRequest, shouldValidateWithWalletMetadata: false, walletConfig: WalletConfig())) { error in
-            assertOpenID4VPException(error,
-                                     expectedMessage: "client_metadata must be present for given response mode",
-                                     expectedCode: OpenID4VPErrorCodes.invalidRequest
-            )
-        }
-    }
-    
     
     // Spec version v1 client metadata parsing tests
 
@@ -136,17 +124,6 @@ final class ClientMetadataUtilTests: XCTestCase {
         }
     }
 
-    func testV1ParsingOfClientMetadataThrowErrorWhenClientMetadataNotPresentAndResponseModeIsDirectPostJwt() throws {
-        let authorizationRequest = createAuthorizationRequest(responseMode: ResponseMode.directPostJwt.rawValue)
-
-        XCTAssertThrowsError(try ClientMetadataSpecVersionHandler.of(.v1).parseAndValidate(authorizationRequest: authorizationRequest, shouldValidateWithWalletMetadata: false, walletConfig: WalletConfig())) { error in
-            assertOpenID4VPException(
-                error,
-                expectedMessage: "client_metadata must be present for given response mode",
-                expectedCode: OpenID4VPErrorCodes.invalidRequest
-            )
-        }
-    }
     
     private func createAuthorizationRequest(clientMetadata: Any? = nil, responseMode: String = ResponseMode.directPost.rawValue) -> [String: Any] {
         if let clientMetadata = clientMetadata {

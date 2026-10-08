@@ -5,7 +5,7 @@ import XCTest
 class DecentralizedIdentifierPrefixAuthorizationRequestHandlerTests : XCTestCase {
     let mockNetworkManager: MockNetworkManager! = MockNetworkManager()
     let decentralizedIdentifierClientId: String = ClientIdPrefix.decentralizedIdentifier.rawValue + ":"+didUrl
-    let mockSetResponseUri: (String) -> Void = { value in
+    let mockSetResponseDispatchInfo: (ResponseDispatchInfo) -> Void = { _ in
     }
     
     let requestUri: URL = URL(string: "https://mock-verifier.com/verifier/get-auth-request-obj")!
@@ -20,14 +20,14 @@ class DecentralizedIdentifierPrefixAuthorizationRequestHandlerTests : XCTestCase
     
     func testReturnFalseForAuthorizationRequestByReferenceSupport() {
         let authorizationRequestParameters: [String : Any] = createAuthorizationRequest(paramList: authRequestWithPreRegisteredByValue , requestParams: mergeMaps(authorizationRequestParamsWithValue, redirectUriSchemeClientIdParameter)) as [String : Any]
-        let handler = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: decentralizedIdentifierClientId, specVersion: .v1 ,authorizationRequestParameters: authorizationRequestParameters, walletConfig: walletConfig, setResponseUri: mockSetResponseUri,walletNonce: "mock-nonce", networkManager: mockNetworkManager)
+        let handler = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: decentralizedIdentifierClientId, specVersion: .v1 ,authorizationRequestParameters: authorizationRequestParameters, walletConfig: walletConfig, setResponseDispatchInfo: mockSetResponseDispatchInfo,walletNonce: "mock-nonce", networkManager: mockNetworkManager)
         
         XCTAssertTrue(handler.isSignedRequestSupported(), "did client_id_prefix should support request by reference")
     }
     
     func testReturnFalseForAuthorizationRequestByValueSupport() {
         let authorizationRequestParameters: [String : Any] = createAuthorizationRequest(paramList: authRequestWithPreRegisteredByValue , requestParams: mergeMaps(authorizationRequestParamsWithValue, redirectUriSchemeClientIdParameter)) as [String : Any]
-        let handler = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: decentralizedIdentifierClientId, specVersion: .v1 ,authorizationRequestParameters: authorizationRequestParameters, walletConfig: walletConfig, setResponseUri: mockSetResponseUri,walletNonce: "mock-nonce", networkManager: mockNetworkManager)
+        let handler = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: decentralizedIdentifierClientId, specVersion: .v1 ,authorizationRequestParameters: authorizationRequestParameters, walletConfig: walletConfig, setResponseDispatchInfo: mockSetResponseDispatchInfo,walletNonce: "mock-nonce", networkManager: mockNetworkManager)
         
         XCTAssertFalse(handler.isUnsignedRequestSupported(), "did client_id_prefix should not support request by value")
     }
@@ -37,14 +37,14 @@ class DecentralizedIdentifierPrefixAuthorizationRequestHandlerTests : XCTestCase
         // Spec Version 1.0 expects client ID decentralized_identifier:did:...
         mockNetworkManager.setMockResponse(for: didDocumentUrl,responseBody: didResponse)
         let authorizationRequestParametersByReference1: [String : Any] = createAuthorizationRequest(paramList: authRequestParamsByReference , requestParams: mergeMaps(authorizationRequestParamsWithValue, DidSchemeClientIdParameters[.draft23]!), specVersion: .v1) as [String : Any]
-        let didSchemeAuthRequestHandler1 = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: didUrl, specVersion: .v1 ,authorizationRequestParameters: authorizationRequestParametersByReference1, walletConfig: walletConfig, setResponseUri: mockSetResponseUri, walletNonce: "mock-nonce", networkManager: mockNetworkManager)
+        let didSchemeAuthRequestHandler1 = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: didUrl, specVersion: .v1 ,authorizationRequestParameters: authorizationRequestParametersByReference1, walletConfig: walletConfig, setResponseDispatchInfo: mockSetResponseDispatchInfo, walletNonce: "mock-nonce", networkManager: mockNetworkManager)
         
         
         XCTAssertFalse(didSchemeAuthRequestHandler1.confirmSpecVersionIdentifiedFromRequest(), "handler should return false when client_id does not align with spec version")
         
         // Spec version draft 23 expects Client ID did:...
         let authorizationRequestParametersByReference2: [String : Any] = createAuthorizationRequest(paramList: authRequestParamsByReference , requestParams: mergeMaps(authorizationRequestParamsWithValue, DidSchemeClientIdParameters[.v1]!), specVersion: .draft23) as [String : Any]
-        let didSchemeAuthRequestHandler2 = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: decentralizedIdentifierClientId, specVersion: .draft23 ,authorizationRequestParameters: authorizationRequestParametersByReference2, walletConfig: walletConfig, setResponseUri: mockSetResponseUri, walletNonce: "mock-nonce", networkManager: mockNetworkManager)
+        let didSchemeAuthRequestHandler2 = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: decentralizedIdentifierClientId, specVersion: .draft23 ,authorizationRequestParameters: authorizationRequestParametersByReference2, walletConfig: walletConfig, setResponseDispatchInfo: mockSetResponseDispatchInfo, walletNonce: "mock-nonce", networkManager: mockNetworkManager)
         
         XCTAssertFalse(didSchemeAuthRequestHandler2.confirmSpecVersionIdentifiedFromRequest(), "handler should return false when client_id does not align with spec version")
     }
@@ -53,14 +53,14 @@ class DecentralizedIdentifierPrefixAuthorizationRequestHandlerTests : XCTestCase
         // Spec Version 1.0 expects client ID decentralized_identifier:did:...
         mockNetworkManager.setMockResponse(for: didDocumentUrl,responseBody: didResponse)
         let authorizationRequestParametersByReference1: [String : Any] = createAuthorizationRequest(paramList: authRequestParamsByReference , requestParams: mergeMaps(authorizationRequestParamsWithValue, DidSchemeClientIdParameters[.v1]!), specVersion: .v1) as [String : Any]
-        let didSchemeAuthRequestHandler1 = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: decentralizedIdentifierClientId, specVersion: .v1 ,authorizationRequestParameters: authorizationRequestParametersByReference1, walletConfig: walletConfig, setResponseUri: mockSetResponseUri, walletNonce: "mock-nonce", networkManager: mockNetworkManager)
+        let didSchemeAuthRequestHandler1 = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: decentralizedIdentifierClientId, specVersion: .v1 ,authorizationRequestParameters: authorizationRequestParametersByReference1, walletConfig: walletConfig, setResponseDispatchInfo: mockSetResponseDispatchInfo, walletNonce: "mock-nonce", networkManager: mockNetworkManager)
         
         
         XCTAssertTrue(didSchemeAuthRequestHandler1.confirmSpecVersionIdentifiedFromRequest(), "handler should return true when client_id does align with spec version")
         
         // Spec version draft 23 expects Client ID did:...
         let authorizationRequestParametersByReference2: [String : Any] = createAuthorizationRequest(paramList: authRequestParamsByReference , requestParams: mergeMaps(authorizationRequestParamsWithValue, DidSchemeClientIdParameters[.draft23]!), specVersion: .draft23) as [String : Any]
-        let didSchemeAuthRequestHandler2 = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: didUrl, specVersion: .draft23 ,authorizationRequestParameters: authorizationRequestParametersByReference2, walletConfig: walletConfig, setResponseUri: mockSetResponseUri, walletNonce: "mock-nonce", networkManager: mockNetworkManager)
+        let didSchemeAuthRequestHandler2 = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: didUrl, specVersion: .draft23 ,authorizationRequestParameters: authorizationRequestParametersByReference2, walletConfig: walletConfig, setResponseDispatchInfo: mockSetResponseDispatchInfo, walletNonce: "mock-nonce", networkManager: mockNetworkManager)
         
         XCTAssertTrue(didSchemeAuthRequestHandler2.confirmSpecVersionIdentifiedFromRequest(), "handler should return true when client_id does align with spec version")
     }
@@ -69,7 +69,7 @@ class DecentralizedIdentifierPrefixAuthorizationRequestHandlerTests : XCTestCase
         // Spec Version 1.0
         mockNetworkManager.setMockResponse(for: didDocumentUrl,responseBody: didResponse)
         let authorizationRequestParametersByReference: [String : Any] = createAuthorizationRequest(paramList: authRequestParamsByReference , requestParams: mergeMaps(authorizationRequestParamsWithValue, DidSchemeClientIdParameters[.v1]!)) as [String : Any]
-        let didSchemeAuthRequestHandler = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: decentralizedIdentifierClientId, specVersion: .v1 ,authorizationRequestParameters: authorizationRequestParametersByReference, walletConfig: walletConfig, setResponseUri: mockSetResponseUri, walletNonce: "mock-nonce", networkManager: mockNetworkManager)
+        let didSchemeAuthRequestHandler = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: decentralizedIdentifierClientId, specVersion: .v1 ,authorizationRequestParameters: authorizationRequestParametersByReference, walletConfig: walletConfig, setResponseDispatchInfo: mockSetResponseDispatchInfo, walletNonce: "mock-nonce", networkManager: mockNetworkManager)
 
         await XCTAssertNoThrowAndVerifyAsync(try await didSchemeAuthRequestHandler.extractPublicKey(keyId: JWSUtil.publicKeyId, algorithm: "EdDSA")){ publicKey in
             assertPublicKey(expectedBase64Encoded: "+Fy3lMapzR3wpaYNCFq29GDEn/NoR3pBsc511q1Cxqw=", actualKey: publicKey)
@@ -77,8 +77,8 @@ class DecentralizedIdentifierPrefixAuthorizationRequestHandlerTests : XCTestCase
         
         // Spec Version Draft 23
         mockNetworkManager.setMockResponse(for: didDocumentUrl,responseBody: didResponse)
-        _ = createAuthorizationRequest(paramList: authRequestParamsByReference , requestParams: mergeMaps(authorizationRequestParamsWithValue, DidSchemeClientIdParameters[.draft23]!)) as [String : Any]
-        let didSchemeAuthRequestHandler2 = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: didUrl, specVersion: .v1 ,authorizationRequestParameters: authorizationRequestParametersByReference, walletConfig: walletConfig, setResponseUri: mockSetResponseUri, walletNonce: "mock-nonce", networkManager: mockNetworkManager)
+        let authorizationRequestParametersByReferenceDraft23: [String : Any] = createAuthorizationRequest(paramList: authRequestParamsByReference , requestParams: mergeMaps(authorizationRequestParamsWithValue, DidSchemeClientIdParameters[.draft23]!), specVersion: .draft23) as [String : Any]
+        let didSchemeAuthRequestHandler2 = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: didUrl, specVersion: .draft23 ,authorizationRequestParameters: authorizationRequestParametersByReferenceDraft23, walletConfig: walletConfig, setResponseDispatchInfo: mockSetResponseDispatchInfo, walletNonce: "mock-nonce", networkManager: mockNetworkManager)
 
         await XCTAssertNoThrowAndVerifyAsync(try await didSchemeAuthRequestHandler2.extractPublicKey(keyId: JWSUtil.publicKeyId, algorithm: "EdDSA")){ publicKey in
             assertPublicKey(expectedBase64Encoded: "+Fy3lMapzR3wpaYNCFq29GDEn/NoR3pBsc511q1Cxqw=", actualKey: publicKey)
@@ -87,7 +87,7 @@ class DecentralizedIdentifierPrefixAuthorizationRequestHandlerTests : XCTestCase
 
     func testShouldThrowErrorWhenAuthRequestObtainedByReferenceDoesNotContainJWTContentTypeInHeader() async {
         let authorizationRequestParametersByReference: [String : Any] = createAuthorizationRequest(paramList: authRequestParamsByReference , requestParams: mergeMaps(authorizationRequestParamsWithValue, DidSchemeClientIdParameters[.v1]!)) as [String : Any]
-        let didSchemeAuthRequestHandler = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: decentralizedIdentifierClientId, specVersion: .v1 ,authorizationRequestParameters: authorizationRequestParametersByReference, walletConfig: walletConfig, setResponseUri: mockSetResponseUri, walletNonce: "mock-nonce", networkManager: mockNetworkManager)
+        let didSchemeAuthRequestHandler = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: decentralizedIdentifierClientId, specVersion: .v1 ,authorizationRequestParameters: authorizationRequestParametersByReference, walletConfig: walletConfig, setResponseDispatchInfo: mockSetResponseDispatchInfo, walletNonce: "mock-nonce", networkManager: mockNetworkManager)
         mockNetworkManager.setMockResponse(for: requestUri.absoluteString, error: NetworkRequestException.networkRequestFailed(message: "Response does not match any acceptable types"))
 
         await XCTAssertAsyncThrowsError(try await didSchemeAuthRequestHandler.fetchAuthorizationRequest()) { error in
@@ -102,7 +102,7 @@ class DecentralizedIdentifierPrefixAuthorizationRequestHandlerTests : XCTestCase
         let authorizationRequestParameters: [String : Any] = createAuthorizationRequest(paramList: authRequestWithPreRegisteredByValue , requestParams: mergeMaps(authorizationRequestParamsWithValue, [
             AuthorizationRequestFieldConstants.clientId: "mock-client",
         ])) as [String : Any]
-        let didScheme = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: decentralizedIdentifierClientId, specVersion: .v1 ,authorizationRequestParameters: authorizationRequestParameters, walletConfig: walletConfig, setResponseUri: mockSetResponseUri, walletNonce: "mock-nonce", networkManager: mockNetworkManager!)
+        let didScheme = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: decentralizedIdentifierClientId, specVersion: .v1 ,authorizationRequestParameters: authorizationRequestParameters, walletConfig: walletConfig, setResponseDispatchInfo: mockSetResponseDispatchInfo, walletNonce: "mock-nonce", networkManager: mockNetworkManager!)
         let expectedWalletMetadata : [String: Any] = [
             "authorization_encryption_alg_values_supported": ["ECDH-ES"],
             "request_object_signing_alg_values_supported": ["EdDSA"],
@@ -130,7 +130,7 @@ class DecentralizedIdentifierPrefixAuthorizationRequestHandlerTests : XCTestCase
 
         let walletConfig = createWalletConfig(requestObjectSigningAlgValuesSupported: nil)
 
-        let didScheme = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: decentralizedIdentifierClientId, specVersion: .v1 ,authorizationRequestParameters: authorizationRequestParameters, walletConfig: walletConfig, setResponseUri: mockSetResponseUri, walletNonce: "mock-nonce", networkManager: mockNetworkManager!)
+        let didScheme = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: decentralizedIdentifierClientId, specVersion: .v1 ,authorizationRequestParameters: authorizationRequestParameters, walletConfig: walletConfig, setResponseDispatchInfo: mockSetResponseDispatchInfo, walletNonce: "mock-nonce", networkManager: mockNetworkManager!)
 
         await XCTAssertAsyncThrowsError(try didScheme.getWalletMetadata(walletConfig: walletConfig)) { error in
             assertOpenID4VPException(error,

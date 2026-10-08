@@ -72,7 +72,7 @@ extension KeyedDecodingContainer {
 
 func getAuthorizationRequestHandler(authorizationRequestParameters: [String:Any],
                                     walletConfig: WalletConfig,
-                                    setResponseUri: @escaping (String) -> Void,
+                                    setResponseDispatchInfo: @escaping (ResponseDispatchInfo) -> Void,
                                     walletNonce: String,
                                     networkManager: NetworkManaging
 ) throws -> ClientIdPrefixBasedAuthorizationRequestHandler {
@@ -88,7 +88,7 @@ func getAuthorizationRequestHandler(authorizationRequestParameters: [String:Any]
                                                               specVersion: specVersion,
                                                               authorizationRequestParameters: authorizationRequestParameters,
                                                               walletConfig: walletConfig,
-                                                              setResponseUri: setResponseUri,
+                                                              setResponseDispatchInfo: setResponseDispatchInfo,
                                                               walletNonce: walletNonce,
                                                               networkManager: networkManager)
     case ClientIdScheme.did.rawValue, ClientIdPrefix.decentralizedIdentifier.rawValue:
@@ -96,7 +96,7 @@ func getAuthorizationRequestHandler(authorizationRequestParameters: [String:Any]
                                                     specVersion: specVersion,
                                                     authorizationRequestParameters: authorizationRequestParameters,
                                                                         walletConfig: walletConfig,
-                                                    setResponseUri: setResponseUri,
+                                                    setResponseDispatchInfo: setResponseDispatchInfo,
                                                     walletNonce: walletNonce,
                                                     networkManager: networkManager)
     case ClientIdPrefix.redirectUri.rawValue:
@@ -104,7 +104,7 @@ func getAuthorizationRequestHandler(authorizationRequestParameters: [String:Any]
                                                             specVersion: specVersion,
                                                             authorizationRequestParameters: authorizationRequestParameters,
                                                             walletConfig: walletConfig,
-                                                            setResponseUri: setResponseUri,
+                                                            setResponseDispatchInfo: setResponseDispatchInfo,
                                                             walletNonce: walletNonce,
                                                             networkManager: networkManager)
     default:
@@ -113,7 +113,7 @@ func getAuthorizationRequestHandler(authorizationRequestParameters: [String:Any]
                                                               specVersion: specVersion,
                                                               authorizationRequestParameters: authorizationRequestParameters,
                                                               walletConfig: walletConfig,
-                                                              setResponseUri: setResponseUri,
+                                                              setResponseDispatchInfo: setResponseDispatchInfo,
                                                               walletNonce: walletNonce,
                                                               networkManager: networkManager)
     }

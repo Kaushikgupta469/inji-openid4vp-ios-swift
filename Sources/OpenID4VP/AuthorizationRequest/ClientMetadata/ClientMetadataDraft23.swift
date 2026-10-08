@@ -64,12 +64,12 @@ public struct ClientMetadataDraft23: Codable {
             )!
             
             self .jwks = try container.decodeRequired(
-                JWKSet.self,
+                LenientJWKSet.self,
                 forKey: .jwks,
                 fieldPath: [AuthorizationRequestFieldConstants.clientMetadata, "jwks"],
                 className: ClientMetadataDraft23.className,
                 isMandatory: false
-            )
+            )?.jwkSet
             try validate(self)
         } catch {
             throw wrapError(error, customError: { message in InvalidData(message: "Error during client metadata decoding - \(message)", className: ClientMetadataDraft23.className) })

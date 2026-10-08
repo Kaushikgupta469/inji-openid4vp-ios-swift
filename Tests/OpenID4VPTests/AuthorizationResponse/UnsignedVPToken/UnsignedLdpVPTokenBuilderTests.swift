@@ -121,7 +121,7 @@ final class UnsignedLdpVPTokenBuilderTests: XCTestCase {
         let ldpVP = ldpVPTokenPayload.values.first!
         guard case let .vp(ldpToken) = ldpVP else { XCTFail("Expected LdpVP.vp"); return }
 
-        // holderId must come from credentialSubject.id (didJwkKey already contains #0, sanitize keeps it unchanged)
+        // holderId must come from credentialSubject.id and be preserved as is by validateHolderId
         XCTAssertEqual(ldpToken.holder, didJwkKey)
         XCTAssertEqual(ldpToken.proof?.verificationMethod, didJwkKey)
         XCTAssertEqual(unsignedVPTokens.count, 1)
@@ -294,7 +294,7 @@ final class UnsignedLdpVPTokenBuilderTests: XCTestCase {
         ]
 
         let (payload, unsignedVPTokens) = try await builder.build(credentialToCredentialQueryIdMappings: &mappings)
-
+        
         XCTAssertEqual(unsignedVPTokens.count, 0)
         assertLdpVPTokenPayload(payload, expectedCredentialsInPresentation: convertToJsonString([ldpVC()]), tokenType: .vc)
     }
@@ -347,7 +347,7 @@ final class UnsignedLdpVPTokenBuilderTests: XCTestCase {
             [
                 "format": FormatType.ldp_vc,
                 "signatureAlgorithm": SignatureAlgorithm.edDsa.rawValue,
-                "holderKeyReference": didJwkKey,
+                "holderKeyReference": bareJwkDid,
                 "dataToSign": ["header": ["alg": "EdDSA", "crit": ["b64"], "b64": false] as [String: Any], "payload": "canonicalized"] as [String: Any]
             ]
         ])
@@ -358,7 +358,7 @@ final class UnsignedLdpVPTokenBuilderTests: XCTestCase {
             XCTFail("Expected LdpVP.vp entry in payload"); return
         }
         XCTAssertNotNil(ldpToken.proof)
-        XCTAssertEqual(ldpToken.proof?.verificationMethod, didJwkKey)
+        XCTAssertEqual(ldpToken.proof?.verificationMethod, bareJwkDid)
         XCTAssertEqual(ldpToken.proof?.challenge, "nonce")
         XCTAssertEqual(ldpToken.proof?.domain, "client_id")
         XCTAssertEqual(ldpToken.proof?.type, SignatureSuite.jsonWebSignature2020.rawValue)
@@ -390,10 +390,10 @@ final class UnsignedLdpVPTokenBuilderTests: XCTestCase {
         })
         XCTAssertEqual(ldpToken.context, ["https://www.w3.org/2018/credentials/v1", "https://w3id.org/security/suites/jws-2020/v1"])
         XCTAssertEqual(ldpToken.type, ["VerifiablePresentation"])
-        XCTAssertEqual(ldpToken.holder, didJwkKey)
+        XCTAssertEqual(ldpToken.holder, bareJwkDid)
         XCTAssertEqual(ldpToken.verifiableCredential.count, 1)
         XCTAssertEqual(ldpToken.proof?.type, SignatureSuite.jsonWebSignature2020.rawValue)
-        XCTAssertEqual(ldpToken.proof?.verificationMethod, didJwkKey)
+        XCTAssertEqual(ldpToken.proof?.verificationMethod, bareJwkDid)
         XCTAssertEqual(ldpToken.proof?.challenge, "nonce")
         XCTAssertEqual(ldpToken.proof?.domain, "client_id")
     }
@@ -410,28 +410,275 @@ final class UnsignedLdpVPTokenBuilderTests: XCTestCase {
             [
                 "format": FormatType.ldp_vc,
                 "signatureAlgorithm": SignatureAlgorithm.edDsa.rawValue,
-                "holderKeyReference": didJwkKey,
+                "holderKeyReference": bareJwkDid,
                 "dataToSign": ["header": ["alg": "EdDSA", "crit": ["b64"], "b64": false] as [String: Any], "payload": "canonicalized"] as [String: Any]
             ]
         ])
     }
 
+    // MARK: - Holder ID validation
+
+    func testValidateHolderIdPreservesSupportedDidsWithOptionalFragments() throws {
+        let holderIds = [
+            "did:jwk:eyJrdHkiOiJFQyJ9",
+            "did:jwk:eyJrdHkiOiJFQyJ9#0",
+            "did:key:z6MkhWUE3JPyK6n4F6yA",
+            "did:key:z6MkhWUE3JPyK6n4F6yA#z6MkhWUE3JPyK6n4F6yA",
+            "did:web:example.com",
+            "did:web:example.com:user:alice",
+            "did:web:example.com#key-1"
+        ]
+        let builder = UnsignedLdpVPTokenBuilder(
+            authorizationRequest: getMockAuthorizationRequest(specVersion: .draft23),
+            specVersion: .draft23,
+            id: "vp-id"
+        )
+
+        for holderId in holderIds {
+            XCTAssertEqual(try builder.validateHolderId(holderId), holderId)
+        }
+    }
+
+    func testBuildThrowsForUnsupportedOrMalformedHolderDids() async throws {
+        let holderIds = [
+            "did:example:123",
+            "did:key:z6MkhWUE3JPyK6n4F6yA#z6MkDifferentFingerprint",
+            "did:jwk:eyJrdHkiOiJFQyJ9#1",
+            "did:web:",
+            "not-a-did",
+            "did:jwk:eyJrdHkiOiJFQyJ9==#1"
+        ]
+
+        for holderId in holderIds {
+            let builder = UnsignedLdpVPTokenBuilder(
+                authorizationRequest: getMockAuthorizationRequest(specVersion: .draft23),
+                specVersion: .draft23,
+                id: "vp-id"
+            )
+            var mappings = [
+                CredentialInputDescriptorMapping(format: .ldp_vc, credential: AnyCodable(ldpVC(holderId: holderId)), inputDescriptorId: "cred-input-1")
+            ]
+
+            await XCTAssertAsyncThrowsError(
+                try await builder.build(credentialInputDescriptorMappings: &mappings)
+            ) { error in
+                assertOpenID4VPException(
+                    error,
+                    expectedMessage: "Holder ID must be a valid did:jwk, did:key, or did:web identifier: \(holderId)",
+                    expectedCode: OpenID4VPErrorCodes.invalidRequest
+                )
+            }
+        }
+    }
+
+    // MARK: - Holder ID with base64url padding
+
+    private static let paddedP256JwkDid = "did:jwk:eyJrdHkiOiJFQyIsInVzZSI6InNpZyIsImNydiI6IlAtMjU2IiwieCI6IjFqNUtiM3JXNXRaMjBRYW5tZ1pYTkJNQzFGOExQNGRjS1VwWm5ZQ2tESEkiLCJ5IjoiaUR6MlpCOHZkS0Y1U05fSkRReHVFT29JMHpQNGV6ZXN5WS13NHo1bTdHdyIsImFsZyI6IkVTMjU2In0="
+
+    func testValidateHolderIdAcceptsPaddedDidJwkAndReturnsOriginalHolderId() throws {
+        let builder = UnsignedLdpVPTokenBuilder(
+            authorizationRequest: getMockAuthorizationRequest(specVersion: .draft23),
+            specVersion: .draft23,
+            id: "vp-id"
+        )
+
+        for paddedHolderId in ["did:jwk:eyJrdHkiOiJFQyJ9==", Self.paddedP256JwkDid] {
+            XCTAssertEqual(try builder.validateHolderId(paddedHolderId), paddedHolderId)
+        }
+    }
+
+    func testValidateHolderIdAcceptsPaddedDidJwkWithFragmentAndReturnsOriginalHolderId() throws {
+        let builder = UnsignedLdpVPTokenBuilder(
+            authorizationRequest: getMockAuthorizationRequest(specVersion: .draft23),
+            specVersion: .draft23,
+            id: "vp-id"
+        )
+        let paddedHolderId = Self.paddedP256JwkDid + "#0"
+
+        XCTAssertEqual(try builder.validateHolderId(paddedHolderId), paddedHolderId)
+    }
+
+    // MARK: - Holder ID pass-through
+
+    func testBuildUsesHolderIdUnmodified() async throws {
+        let testCases: [(holderId: String, signatureAlgorithm: String)] = [
+            (bareJwkDid, SignatureAlgorithm.edDsa.rawValue),
+            (didJwkKey, SignatureAlgorithm.edDsa.rawValue),
+            (Self.p256JwkDid, SignatureAlgorithm.es256.rawValue),
+            (Self.paddedP256JwkDid, SignatureAlgorithm.es256.rawValue),
+            (Self.paddedP256JwkDid + "#0", SignatureAlgorithm.es256.rawValue)
+        ]
+
+        for testCase in testCases {
+            let builder = UnsignedLdpVPTokenBuilder(
+                authorizationRequest: getMockAuthorizationRequest(specVersion: .draft23),
+                specVersion: .draft23,
+                id: "vp-id"
+            )
+            var mappings = [
+                CredentialInputDescriptorMapping(format: .ldp_vc, credential: AnyCodable(ldpVC(holderId: testCase.holderId)), inputDescriptorId: "cred-input-1")
+            ]
+
+            let (payload, unsignedVPTokens) = try await builder.build(credentialInputDescriptorMappings: &mappings)
+
+            let ldpVPTokenPayload = try XCTUnwrap(payload as? [String: LdpVP])
+            guard case let .vp(ldpToken) = ldpVPTokenPayload.values.first else {
+                XCTFail("Expected LdpVP.vp for holder ID: \(testCase.holderId)"); continue
+            }
+            XCTAssertEqual(ldpToken.holder, testCase.holderId)
+            XCTAssertEqual(ldpToken.proof?.verificationMethod, testCase.holderId)
+            XCTAssertEqual(unsignedVPTokens.count, 1)
+            XCTAssertEqual(unsignedVPTokens.first?.holderKeyReference, testCase.holderId)
+            XCTAssertEqual(unsignedVPTokens.first?.signatureAlgorithm, testCase.signatureAlgorithm)
+        }
+    }
+
+    func testDcqlBuildUsesHolderIdUnmodified() async throws {
+        let holderId = Self.paddedP256JwkDid
+        let builder = builderWithDcqlRequest(credentialQueryId: "q1", credentialQueryFormat: "ldp_vc", requireCryptographicHolderBinding: true)
+        var mappings = [
+            CredentialToCredentialQueryIdMapping(format: .ldp_vc, credential: AnyCodable(ldpVC(holderId: holderId)), credentialQueryId: "q1")
+        ]
+
+        let (payload, unsignedVPTokens) = try await builder.build(credentialToCredentialQueryIdMappings: &mappings)
+
+        let ldpVPTokenPayload = try XCTUnwrap(payload as? [String: LdpVP])
+        guard case let .vp(ldpToken) = ldpVPTokenPayload.values.first else {
+            return XCTFail("Expected LdpVP.vp")
+        }
+        XCTAssertEqual(ldpToken.holder, holderId)
+        XCTAssertEqual(ldpToken.proof?.verificationMethod, holderId)
+        XCTAssertEqual(unsignedVPTokens.count, 1)
+        XCTAssertEqual(unsignedVPTokens.first?.holderKeyReference, holderId)
+        XCTAssertEqual(unsignedVPTokens.first?.signatureAlgorithm, SignatureAlgorithm.es256.rawValue)
+    }
+
     // MARK: - Helpers
 
-    private func ldpVC() -> [String: Any] {
+    // MARK: - VC 2.0 Data Integrity
+
+    private static let p256JwkDid = "did:jwk:eyJrdHkiOiJFQyIsImNydiI6IlAtMjU2IiwieCI6ImY4M09KM0QyeEYxQmc4dnViOXRMZTFnSE16Vjc2ZThUdXM5dVBIdlJWRVUiLCJ5IjoieF9GRXpSdTltMzZITE5fdHVlNjU5TE5wWFc2cEN5U3Rpa1lqS0lXSTVhMCJ9#0"
+    private static let rsaJwkDid = "did:jwk:eyJrdHkiOiJSU0EiLCJlIjoiQVFBQiIsIm4iOiIwdng3YWdvZWJHY1FTdXVQaUxKWFpwdE45bm5kclFtYlhFcHMyYWlBRmJXaE03OExoV3g0Y2JiZkFBdFZUODZ6d3UxUks3YVBGRnh1aERSMUw2dFNvY19CSkVDUGViV0tSWGpCWkNpRlY0bjNva25qaE1zdG42NHRaXzJXLTVKc0dZNEhjNW45eUJYQXJ3bDkzbHF0N19STjV3NkNmMGg0UXlRNXYtNjVZR2pRUjBfRkRXMlF2enFZMzY4UVFNaWNBdGFTcXpzOEtKWmduWWI5YzdkMHpnZEFaSHp1NnFNUXZSTDVoYWpybjFuOTFDYk9wYklTRDA4cU5MeXJka3QtYkZUV2hBSTR2TVFGaDZXZVp1MGZNNGxGZDJOY1J3cjNYUGtzSU5IYVEtR194Qm5pSXFidzBMczFqRjQ0LWNzRkN1ci1rRWdVOGF3YXBKektucURLZ3cifQ#0"
+
+    private func vcdm2Credential(holderId: String = didJwkKey) -> [String: Any] {
+        return [
+            "@context": ["https://www.w3.org/ns/credentials/v2"],
+            "type": ["VerifiableCredential"],
+            "issuer": "did:example:issuer",
+            "credentialSubject": ["id": holderId]
+        ]
+    }
+
+    func testVcdm2CredentialBuildsEddsaDataIntegrityPresentation() async throws {
+        let builder = UnsignedLdpVPTokenBuilder(
+            authorizationRequest: getMockAuthorizationRequest(specVersion: .draft23),
+            specVersion: .draft23,
+            id: "vp-id"
+        )
+        var mappings = [
+            CredentialInputDescriptorMapping(format: .ldp_vc, credential: AnyCodable(vcdm2Credential()), inputDescriptorId: "vc2")
+        ]
+
+        let (payload, unsignedVPTokens) = try await builder.build(credentialInputDescriptorMappings: &mappings)
+
+        let parsedPayload = try XCTUnwrap(payload as? [String: LdpVP])
+        guard case let .vp(vpToken) = parsedPayload.values.first else {
+            return XCTFail("Expected an LdpVPToken payload")
+        }
+
+        XCTAssertEqual(vpToken.context, ["https://www.w3.org/ns/credentials/v2"])
+        XCTAssertEqual(vpToken.proof?.type, "DataIntegrityProof")
+        XCTAssertEqual(vpToken.proof?.cryptosuite, "eddsa-rdfc-2022")
+        XCTAssertEqual(vpToken.proof?.proofPurpose, ProofPurpose.vpProofPurpose)
+        XCTAssertEqual(vpToken.proof?.verificationMethod, didJwkKey)
+        // Data Integrity signs the canonicalization output directly, with no JWS header prefix.
+        XCTAssertEqual(unsignedVPTokens.first?.dataToSign, try Base64Decoder.decodeBase64ToData(canonicalized))
+    }
+
+    func testVcdm2CredentialBuildsEcdsaDataIntegrityPresentation() async throws {
+        let builder = UnsignedLdpVPTokenBuilder(
+            authorizationRequest: getMockAuthorizationRequest(specVersion: .draft23),
+            specVersion: .draft23,
+            id: "vp-id"
+        )
+        var mappings = [
+            CredentialInputDescriptorMapping(format: .ldp_vc, credential: AnyCodable(vcdm2Credential(holderId: Self.p256JwkDid)), inputDescriptorId: "vc2")
+        ]
+
+        let (payload, unsignedVPTokens) = try await builder.build(credentialInputDescriptorMappings: &mappings)
+
+        let parsedPayload = try XCTUnwrap(payload as? [String: LdpVP])
+        guard case let .vp(vpToken) = parsedPayload.values.first else {
+            return XCTFail("Expected an LdpVPToken payload")
+        }
+
+        XCTAssertEqual(vpToken.proof?.type, "DataIntegrityProof")
+        XCTAssertEqual(vpToken.proof?.cryptosuite, "ecdsa-rdfc-2019")
+        XCTAssertEqual(unsignedVPTokens.first?.signatureAlgorithm, SignatureAlgorithm.es256.rawValue)
+    }
+
+    func testVcdm2CredentialRejectsRsaHolderKey() async throws {
+        let builder = UnsignedLdpVPTokenBuilder(
+            authorizationRequest: getMockAuthorizationRequest(specVersion: .draft23),
+            specVersion: .draft23,
+            id: "vp-id"
+        )
+        var mappings = [
+            CredentialInputDescriptorMapping(format: .ldp_vc, credential: AnyCodable(vcdm2Credential(holderId: Self.rsaJwkDid)), inputDescriptorId: "vc2")
+        ]
+
+        await XCTAssertAsyncThrowsError(
+            try await builder.build(credentialInputDescriptorMappings: &mappings)
+        ) { error in
+            assertOpenID4VPException(
+                error,
+                expectedMessage: "VC 2.0 presentation sharing supports only Ed25519 and P-256 holder keys; found RS256",
+                expectedCode: OpenID4VPErrorCodes.accessDenied
+            )
+        }
+    }
+
+    func testVcdm2ContextMustBeTheFirstContextEntry() async throws {
+        let credential: [String: Any] = [
+            "@context": [
+                "https://www.w3.org/2018/credentials/v1",
+                "https://www.w3.org/ns/credentials/v2"
+            ],
+            "type": ["VerifiableCredential"],
+            "credentialSubject": ["id": didJwkKey]
+        ]
+        let builder = UnsignedLdpVPTokenBuilder(
+            authorizationRequest: getMockAuthorizationRequest(specVersion: .draft23),
+            specVersion: .draft23,
+            id: "vp-id"
+        )
+        var mappings = [
+            CredentialInputDescriptorMapping(format: .ldp_vc, credential: AnyCodable(credential), inputDescriptorId: "vc2")
+        ]
+
+        await XCTAssertAsyncThrowsError(
+            try await builder.build(credentialInputDescriptorMappings: &mappings)
+        ) { error in
+            assertOpenID4VPException(
+                error,
+                expectedMessage: "VC 2.0 context must be the first @context entry",
+                expectedCode: OpenID4VPErrorCodes.invalidRequest
+            )
+        }
+    }
+
+    private func ldpVC(holderId: String = didJwkKey) -> [String: Any] {
         return [
             "@context": ["https://www.w3.org/2018/credentials/v1"],
             "type": ["VerifiableCredential"],
             "issuer": "did:example:issuer",
             "issuanceDate": "2020-08-19T21:41:50Z",
-            "credentialSubject": ["id": didJwkKey]
+            "credentialSubject": ["id": holderId]
         ]
     }
 
     private func ldpVCWithJwkHolder() -> [String: Any] {
-        // Use the bare JWK DID without the fragment (#0) so that sanitize() appends #0
-        // and produces exactly didJwkKey as the holderKeyReference/verificationMethod
-        let bareJwkDid = String(didJwkKey.dropLast(2)) // strips "#0"
+        // Use the bare JWK DID without the fragment (#0); validateHolderId() preserves it as is
         return [
             "@context": ["https://www.w3.org/2018/credentials/v1"],
             "type": ["VerifiableCredential"],
@@ -567,7 +814,7 @@ final class UnsignedLdpVPTokenBuilderTests: XCTestCase {
                 XCTFail("Expected [String: LdpVP] payload with LdpVP.vc entries for VC type", file: file, line: line)
                 return
             }
-            assertJsonString(expected: expectedCredentialsInPresentation, actual: convertToJsonString([ldpVCToken.verifiableCredential]), file: file, line: line)
+            assertJsonString(expected: expectedCredentialsInPresentation, actual: convertToJsonString([ldpVCToken.verifiableCredential.value]), file: file, line: line)
         }
     }
 

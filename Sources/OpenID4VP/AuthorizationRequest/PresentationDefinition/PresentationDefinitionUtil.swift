@@ -141,9 +141,12 @@ func parseAndValidatePresentationDefinition(
 fileprivate func validateForCredentialFormat(_ presentationDefinition: PresentationDefinition, responseMode: String?) throws {
     //In case of mso_mdoc format VCs requested in Authorization Request, direct_post.jwt is the allowed response_mode
     let hasMsoMdocFormat: Bool =  presentationDefinition.format?.contains(where: { $0.key == FormatType.mso_mdoc.rawValue }) ?? false || presentationDefinition.inputDescriptors.contains(where: {$0.format?.contains(where: { $0.key == FormatType.mso_mdoc.rawValue }) ?? false})
-    if(hasMsoMdocFormat && (responseMode != ResponseMode.directPostJwt.rawValue && responseMode != ResponseMode.iarPostJwt.rawValue)){
+    if (hasMsoMdocFormat &&
+        (responseMode != ResponseMode.directPostJwt.rawValue &&
+        responseMode != ResponseMode.iarPostJwt.rawValue &&
+        responseMode != ResponseMode.iaePostJwt.rawValue)){
         throw InvalidData(
-            message: "When mso_mdoc format is present in presentation definition, response_mode must be direct_post.jwt or iar_post.jwt",
+            message: "When mso_mdoc format is present in presentation definition, response_mode must be direct_post.jwt, iar-post.jwt or iae_post.jwt",
             className: className
         )
     }

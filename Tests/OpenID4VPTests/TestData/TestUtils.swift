@@ -1,4 +1,5 @@
 import Foundation
+import JSONWebKey
 @testable import OpenID4VP
 import XCTest
 
@@ -358,5 +359,40 @@ func ldpVC(
         ]
     }
     return data
+}
+
+let jwtDispatchInfoEncKeyJson: [String: Any] = [
+    "kty": "OKP", "crv": "X25519", "use": "enc",
+    "x": "BVNVdqorpxCCnTOkkw8S2NAYXvfEvkC-8RDObhrAUA4",
+    "alg": "ECDH-ES", "kid": "ed-key1"
+]
+
+func makeJwtDispatchInfo(
+    responseUrl: String = "https://mock-verifier.com",
+    includeEncryption: Bool = true,
+    nonce: String = "tHwahwI6M5_Cd_Sj5k2_Aw",
+    walletNonce: String = "_G6UkKgcsUPFlHAbzUMerA",
+    state: String? = "state"
+) throws -> ResponseDispatchInfo {
+    let encSpec: ResponseEncryptionSpecification?
+    if includeEncryption {
+        let jwk = try JSONDecoder().decode(JWK.self, from: JSONSerialization.data(withJSONObject: jwtDispatchInfoEncKeyJson))
+        encSpec = ResponseEncryptionSpecification(
+            keyEncryptionAlg: EncryptionAlgorithm(rawValue: "ECDH-ES")!,
+            contentEncryptionAlg: EncryptionMethod(rawValue: "A256GCM")!,
+            verifierPublicKey: jwk
+        )
+    } else {
+        encSpec = nil
+    }
+    return ResponseDispatchInfo(
+        responseMode: ResponseMode.directPostJwt.rawValue,
+        nonce: nonce,
+        walletNonce: walletNonce,
+        state: state,
+        clientId: "client_id",
+        responseUrl: responseUrl,
+        responseEncryptionSpecification: encSpec
+    )
 }
 

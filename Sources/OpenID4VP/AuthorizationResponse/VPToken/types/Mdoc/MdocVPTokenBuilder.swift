@@ -103,10 +103,13 @@ class MdocVPTokenBuilder : VPTokenBuilder {
                 className: className
             )
         }
-        guard var document = try? decodeCBOR(base64EncodedInput: mdocCredential) else {
-            throw InvalidData( message: "Invalid Verifiable Credential: Error while decoding credential", className: className)
-        }
-        
+
+        let (docType, issuerSigned) = try getMdocDocTypeAndIssuerSigned(from: credential, className: className)
+        var document = CBOR.map([
+            CBOR.utf8String("issuerSigned"): issuerSigned,
+            CBOR.utf8String("docType"): docType,
+        ])
+
         let (_, alg) = try resolveMdocKeyAndAlg(mdocCredential)
         
         let deviceAuthSignature = DeviceAuthentication(signature: vpTokenSigningResult.signedData, algorithm: alg)
@@ -116,8 +119,8 @@ class MdocVPTokenBuilder : VPTokenBuilder {
         let deviceAuth = CBOR.map([.utf8String("deviceSignature"): deviceSignature])
         let deviceNamespacesBytes = wrapCBORInputWithTag24(input: CBOR.map([:]))!
         let deviceSigned = CBOR.map([
-            .utf8String("deviceAuthentication"): deviceAuth,
-            .utf8String("namespaces"): deviceNamespacesBytes,
+            .utf8String("deviceAuth"): deviceAuth,
+            .utf8String("nameSpaces"): deviceNamespacesBytes,
         ])
         
         // attach deviceSigned to cborCredential
@@ -136,29 +139,11 @@ class MdocVPTokenBuilder : VPTokenBuilder {
         return MdocVPToken(base64EncodedDeviceResponse: encodedDeviceResponseBase64Url)
     }
     
-    // DeviceSignature is of COSE_Sign1 structure
-    /**
-     COSE_Sign1 = [
-     Headers, //protected , unprotected in order
-     payload : bstr / nil,
-     signature : bstr
-     ]
-     */
-    private func createDeviceSignature(_ vpResponseMetadata: DeviceAuthentication) throws -> CBOR {
-        let base64DecodedSignature = vpResponseMetadata.signature
-        let cborEncodedSignature = cborEncode(toCBOR(base64DecodedSignature))
-        let protectedHeaders = CBOR.map([
-            .unsignedInt(1): try mapSigningAlgorithmToProtectedAlg(algorithm: vpResponseMetadata.algorithm)
-        ])
-        let unprotectedHeaders = CBOR.map([:])
-        //Payload is available as detached content
-        let payload = CBOR.null
-        
-        return CBOR.array([
-            .byteString(cborEncode(protectedHeaders)),
-            unprotectedHeaders,
-            payload,
-            .byteString(cborEncodedSignature),
-        ])
+    private func createDeviceSignature(_ deviceAuthentication: DeviceAuthentication) throws -> CBOR {
+        let rawSignatureBytes = [UInt8](deviceAuthentication.signature)
+        return try CoseSignature1Utils.createCoseSign1(
+            signingAlgorithm: deviceAuthentication.algorithm,
+            signature: rawSignatureBytes
+        )
     }
 }

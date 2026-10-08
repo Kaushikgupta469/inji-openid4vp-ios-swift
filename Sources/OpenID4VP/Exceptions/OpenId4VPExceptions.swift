@@ -136,8 +136,18 @@ class InvalidLimitDisclosure: OpenID4VPException {
 
 
 class InvalidData: OpenID4VPException {
-    init(message: String, className: String, code: String? = nil) {
-        super.init(errorCode: code ?? OpenID4VPErrorCodes.invalidRequest, message: message, className: className)
+    init(message: String, className: String, code: String? = nil, notifyVerifier: Bool = true) {
+        super.init(errorCode: code ?? OpenID4VPErrorCodes.invalidRequest, message: message, className: className, notifyVerifier: notifyVerifier)
+    }
+}
+
+class UnsupportedVcdm2HolderKey: OpenID4VPException {
+    init(algorithm: String, className: String) {
+        super.init(
+            errorCode: OpenID4VPErrorCodes.accessDenied,
+            message: "VC 2.0 presentation sharing supports only Ed25519 and P-256 holder keys; found \(algorithm)",
+            className: className
+        )
     }
 }
 
@@ -198,8 +208,7 @@ class PublicKeyResolutionFailed: OpenID4VPException {
 }
 
 class InvalidSignature: OpenID4VPException {
-    init(className: String) {
-        let message = "JWS proof verification failed"
+    init(message: String = "JWS proof verification failed", className: String) {
         super.init(errorCode: OpenID4VPErrorCodes.invalidRequest, message: message, className: className)
     }
 }

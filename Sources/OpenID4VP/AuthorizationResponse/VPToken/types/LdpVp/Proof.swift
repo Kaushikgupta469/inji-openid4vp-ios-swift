@@ -10,4 +10,5 @@ struct Proof: Encodable {
     var verificationMethod: String
     var proofValue: String? = nil
     var signatureValue: String? = nil
+    var cryptosuite: String? = nil
 }

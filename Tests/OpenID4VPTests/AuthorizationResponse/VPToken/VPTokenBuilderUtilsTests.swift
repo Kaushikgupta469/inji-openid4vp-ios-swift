@@ -1,4 +1,5 @@
 import XCTest
+import SwiftCBOR
 @testable import OpenID4VP
 
 final class VPTokenBuilderUtilsTests: XCTestCase {
@@ -13,6 +14,23 @@ final class VPTokenBuilderUtilsTests: XCTestCase {
 
     private func makeUnsignedToken(id: String) -> UnsignedVPToken {
         UnsignedVPToken(id: id, format: .ldp_vc, holderKeyReference: "key-ref", signatureAlgorithm: "ES256", dataToSign: Data("data".utf8))
+    }
+
+    private func assertValidMdocKeyAndAlg(
+        _ result: (keyRef: String, alg: String),
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        XCTAssertFalse(result.keyRef.isEmpty, file: file, line: line)
+        XCTAssertEqual(result.alg, "ES256", file: file, line: line)
+
+        let keyRefData = Data(base64UrlEncoded: result.keyRef)
+        XCTAssertNotNil(keyRefData, file: file, line: line)
+
+        if let keyRefData {
+            let decodedKey = try? CBORDecoder(input: [UInt8](keyRefData)).decodeItem()
+            XCTAssertNotNil(decodedKey, file: file, line: line)
+        }
     }
 
     // MARK: - getVPTokenSigningResult — happy path
@@ -172,5 +190,17 @@ final class VPTokenBuilderUtilsTests: XCTestCase {
                 expectedCode: OpenID4VPErrorCodes.invalidRequest
             )
         }
+    }
+
+    // MARK: - resolveMdocKeyAndAlg
+
+    func testResolveMdocKeyAndAlgWorksForLegacyFormat2Mdoc() throws {
+        let result = try resolveMdocKeyAndAlg(sampleMdoc)
+        assertValidMdocKeyAndAlg(result)
+    }
+
+    func testResolveMdocKeyAndAlgWorksForVciFormat1Mdoc() throws {
+        let result = try resolveMdocKeyAndAlg(sampleMdocFormat1)
+        assertValidMdocKeyAndAlg(result)
     }
 }

@@ -12,7 +12,7 @@ class MockClientIdPrefixAuthRequestHandler: ClientIdPrefixBasedAuthorizationRequ
     var specVersionAndVPRequestMatch: Bool = true
     
     init(authorizationRequestParameters: [String: Any],
-         setResponseUri: @escaping (String) -> Void,
+         setResponseDispatchInfo: @escaping (ResponseDispatchInfo) -> Void,
          walletNonce: String,
          networkManager: NetworkManaging,
          clientId: String = "mock-client",
@@ -32,7 +32,7 @@ class MockClientIdPrefixAuthRequestHandler: ClientIdPrefixBasedAuthorizationRequ
                    specVersion: specVersion,
                    authorizationRequestParameters: authorizationRequestParameters,
                    walletConfig: walletConfig,
-                   setResponseUri: setResponseUri,
+                   setResponseDispatchInfo: setResponseDispatchInfo,
                    walletNonce: walletNonce,
                    networkManager: networkManager)
         delegate = self

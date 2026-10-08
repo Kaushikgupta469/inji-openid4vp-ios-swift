@@ -39,6 +39,50 @@ final class LdpVPTokenBuilderTests: XCTestCase {
         )
     }
 
+    // MARK: - Data Integrity proofs (VC 2.0)
+
+    private func buildDataIntegrity(signatureLength: Int) throws -> (vpTokens: [VPToken], DescriptorMaps: [DescriptorMap], nextIndex: Int) {
+        let ldpToken = makeLdpVPToken(proofType: SignatureSuite.dataIntegrityProof.rawValue)
+        let mappings = [
+            CredentialInputDescriptorMapping(format: .ldp_vc, credential: credential, inputDescriptorId: "desc-1", identifier: "uuid1")
+        ]
+        let unsignedResult = (vpTokenSigningPayload: ["uuid1": ldpToken] as VPTokenSigningPayload, unsignedVPTokens: [unsignedVPToken])
+
+        return try builder.build(
+            credentialInputDescriptorMappings: mappings,
+            unsignedVPTokenResult: unsignedResult,
+            vpTokenSigningResults: [
+                VPTokenSigningResult(id: "uuid1", signedData: Data(repeating: 0x01, count: signatureLength))
+            ],
+            rootIndex: 0
+        )
+    }
+
+    func testDataIntegritySignatureEncodedAsMultibaseProofValue() throws {
+        let result = try buildDataIntegrity(signatureLength: 64)
+
+        let token = try XCTUnwrap(result.vpTokens[0] as? LdpVPToken)
+        XCTAssertEqual(token.proof?.type, SignatureSuite.dataIntegrityProof.rawValue)
+        XCTAssertEqual(
+            token.proof?.proofValue,
+            BaseEncoding.base58BtcEncode(Data(repeating: 0x01, count: 64))
+        )
+        XCTAssertNil(token.proof?.jws)
+        XCTAssertNil(token.proof?.signatureValue)
+    }
+
+    func testDataIntegrityRejectsSignatureThatIsNot64Bytes() throws {
+        for length in [63, 65] {
+            XCTAssertThrowsError(try buildDataIntegrity(signatureLength: length)) { error in
+                assertOpenID4VPException(
+                    error,
+                    expectedMessage: "Data Integrity Ed25519 and P-256 signatures must be exactly 64 bytes",
+                    expectedCode: OpenID4VPErrorCodes.invalidRequest
+                )
+            }
+        }
+    }
+
     // MARK: - build(credentialInputDescriptorMappings:)
 
     func testBuildWithHolderBindingJsonWebSignature2020() throws {

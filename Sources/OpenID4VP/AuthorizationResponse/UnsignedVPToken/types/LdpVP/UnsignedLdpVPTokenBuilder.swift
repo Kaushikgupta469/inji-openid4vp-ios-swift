@@ -2,6 +2,9 @@ import Foundation
 
 private let className = "UnsignedLdpVPTokenBuilder"
 
+private let eddsaRdfc2022 = "eddsa-rdfc-2022"
+private let ecdsaRdfc2019 = "ecdsa-rdfc-2019"
+
 class UnsignedLdpVPTokenBuilder: UnsignedVPTokenBuilder {
     private let id: String
     public let specVersion: SpecVersion
@@ -49,7 +52,8 @@ class UnsignedLdpVPTokenBuilder: UnsignedVPTokenBuilder {
                 identifier: identifier,
                 with: verifiableCredentials,
                 signatureSuite: result.signatureSuite,
-                holder: sanitize(result.holder)
+                holder: try validateHolderId(result.holder),
+                isVcdm2: try isVcdm2Credential(credential, className: className)
             )
             
             vpTokenSigningPayloads[identifier] = vpTokenSigningPayload
@@ -94,7 +98,8 @@ class UnsignedLdpVPTokenBuilder: UnsignedVPTokenBuilder {
                 identifier: identifier,
                 with: verifiableCredentials,
                 signatureSuite: result.signatureSuite,
-                holder: sanitize(result.holder)
+                holder: try validateHolderId(result.holder),
+                isVcdm2: try isVcdm2Credential(credential, className: className)
             )
             
             vpTokenSigningPayloads[identifier] = vpTokenSigningPayload
@@ -107,8 +112,8 @@ class UnsignedLdpVPTokenBuilder: UnsignedVPTokenBuilder {
         return (vpTokenSigningPayloads, unsignedVPTokens)
     }
     
-    private func buildPayloadAndUnsignedVPToken(identifier: String, with credentials: [AnyCodable], signatureSuite: String?, holder: String?) async throws -> (vpTokenSigningPayload: LdpVP, unsignedVPToken: UnsignedVPToken?) {
-        var context: [String] = ["https://www.w3.org/2018/credentials/v1"]
+    private func buildPayloadAndUnsignedVPToken(identifier: String, with credentials: [AnyCodable], signatureSuite: String?, holder: String?, isVcdm2: Bool) async throws -> (vpTokenSigningPayload: LdpVP, unsignedVPToken: UnsignedVPToken?) {
+        var context: [String] = [isVcdm2 ? vcdmV2Context : vcdmV1Context]
         if signatureSuite == SignatureSuite.ed25519Signature2020.rawValue {
             context.append("https://w3id.org/security/suites/ed25519-2020/v1")
         } else if signatureSuite == SignatureSuite.jsonWebSignature2020.rawValue {
@@ -123,13 +128,27 @@ class UnsignedLdpVPTokenBuilder: UnsignedVPTokenBuilder {
             throw InvalidData(message: "Signature suite is required for LDP VP Tokens", className: className)
         }
         
+        let signatureAlgorithm: String = try await getJWSAlgorithm(from: holder)
+
+        var cryptosuite: String? = nil
+        if isVcdm2 {
+            switch signatureAlgorithm {
+            case SignatureAlgorithm.edDsa.rawValue: cryptosuite = eddsaRdfc2022
+            case SignatureAlgorithm.es256.rawValue: cryptosuite = ecdsaRdfc2019
+            default:
+                throw UnsupportedVcdm2HolderKey(algorithm: signatureAlgorithm, className: className)
+            }
+        }
+
         let proof = Proof(
-            type: signatureSuite,
+            type: isVcdm2 ? SignatureSuite.dataIntegrityProof.rawValue : signatureSuite,
             created: nil,
             challenge: authorizationRequest.nonce,
             domain: authorizationRequest.clientId,
+            proofPurpose: isVcdm2 ? ProofPurpose.vpProofPurpose : nil,
             verificationMethod: holder,
-            proofValue: nil
+            proofValue: nil,
+            cryptosuite: cryptosuite
         )
         
         let vpTokenSigningPayload : LdpVP = .vp(
@@ -156,8 +175,22 @@ class UnsignedLdpVPTokenBuilder: UnsignedVPTokenBuilder {
         let canonicalizedData = try await jsonLdCanonicalizer(jsonString)
         let normalizedCredentialData = try Base64Decoder.decodeBase64ToData(canonicalizedData)
         
-        let signatureAlgorithm: String = try await getJWSAlgorithm(from: holder)
         var signingInput = Data()
+
+        // Data Integrity signs the canonicalization output directly: the canonicalizer already
+        // returns sha256(canonical proof config) || sha256(canonical document).
+        if isVcdm2 {
+            signingInput = normalizedCredentialData
+            let unsignedVPToken = UnsignedVPToken(
+                id: identifier,
+                format: .ldp_vc,
+                holderKeyReference: holder,
+                signatureAlgorithm: signatureAlgorithm,
+                dataToSign: signingInput
+            )
+            return (vpTokenSigningPayload, unsignedVPToken)
+        }
+
         switch signatureSuite {
         case SignatureSuite.jsonWebSignature2020.rawValue,
             SignatureSuite.ed25519Signature2018.rawValue:
@@ -203,17 +236,30 @@ class UnsignedLdpVPTokenBuilder: UnsignedVPTokenBuilder {
         }
         
         
-        return (holder: holderId, signatureSuite: SignatureSuite.jsonWebSignature2020.rawValue)
+        let signatureSuite = try isVcdm2Credential(credential, className: className)
+            ? SignatureSuite.dataIntegrityProof.rawValue
+            : SignatureSuite.jsonWebSignature2020.rawValue
+
+        return (holder: holderId, signatureSuite: signatureSuite)
     }
     
-    private func sanitize(_ holderId: String?) -> String? {
-        guard let holderId = holderId else {
-            return nil
+    func validateHolderId(_ holderId: String) throws -> String {
+        let sanitizedHolderId = stripDidJwkPadding(holderId)
+
+        let hasValidDidSyntax = sanitizedHolderId.range(of: supportedHolderDidPattern, options: .regularExpression) != nil
+        let hasValidDidKeyFragment: Bool
+        if holderId.hasPrefix("did:key:"), let separatorIndex = holderId.firstIndex(of: "#") {
+            let fingerprint = holderId[holderId.index(holderId.startIndex, offsetBy: "did:key:".count)..<separatorIndex]
+            let fragment = holderId[holderId.index(after: separatorIndex)...]
+            hasValidDidKeyFragment = fragment == fingerprint
+        } else {
+            hasValidDidKeyFragment = true
         }
-        let sanitizedHolderId = holderId
-            .replacingOccurrences(of: "+", with: "-")
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: "=", with: "")
-        return sanitizedHolderId.contains("#") ? sanitizedHolderId : sanitizedHolderId + "#0"
+
+        guard hasValidDidSyntax, hasValidDidKeyFragment else {
+            throw InvalidData(message: "Holder ID must be a valid did:jwk, did:key, or did:web identifier: \(holderId)", className: className)
+        }
+
+        return holderId
     }
 }

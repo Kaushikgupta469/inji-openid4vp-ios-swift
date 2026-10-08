@@ -45,23 +45,6 @@ enum ClientMetadataSpecVersionHandler {
             }
         }
         
-        let responseMode = authorizationRequest[AuthorizationRequestFieldConstants.responseMode] as? String
-        let parsedClientMetadata = mutableParams[clientMetadataKey]
-        switch self {
-        case .v1:
-            try ResponseModeBasedHandlerFactory.get(responseMode: responseMode).validate(
-                clientMetadata: (parsedClientMetadata as? ClientMetadata),
-                walletConfig: walletConfig,
-                shouldValidateWithWalletMetadata: shouldValidateWithWalletMetadata
-            )
-        case .draft23:
-            try ResponseModeBasedHandlerFactory.get(responseMode: responseMode).validate(
-                clientMetadata: (parsedClientMetadata as? ClientMetadataDraft23),
-                walletConfig: walletConfig,
-                shouldValidateWithWalletMetadata: shouldValidateWithWalletMetadata
-            )
-        }
-        
         return mutableParams
     }
         

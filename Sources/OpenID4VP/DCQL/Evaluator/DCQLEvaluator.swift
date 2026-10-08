@@ -27,6 +27,7 @@ internal struct DcqlEvaluator {
         // Local caches to ensure we only do work ONCE
         var credentialsTagCache: [String: TaggedCredential] = [:]
         var processedCredentialsCache: [String: any ProcessedCredential] = [:]
+        let holderAlgorithmCache = HolderAlgorithmCache()
         
         for credentialQuery in dcqlQuery.credentials {
             // 1. Format check
@@ -46,10 +47,18 @@ internal struct DcqlEvaluator {
 
                 guard let credentialTag = credentialsTagCache[credentialId] else { continue }
 
-                let holderBindingAndMetaMatchSuccess = matchesCryptographicHolderBinding(
+                var holderBindingAndMetaMatchSuccess = matchesCryptographicHolderBinding(
                     dcqlQueryRequestsCryptograhicHolderBinding: credentialQuery.requireCryptographicHolderBinding,
                     walletCredential: credentialTag
                 ) && matchesMeta(credentialQuery.meta, walletCredential: credentialTag)
+
+                if holderBindingAndMetaMatchSuccess {
+                    holderBindingAndMetaMatchSuccess = await canPreparePresentation(
+                        requireCryptographicHolderBinding: credentialQuery.requireCryptographicHolderBinding,
+                        walletCredential: credentialTag,
+                        holderAlgorithmCache: holderAlgorithmCache
+                    )
+                }
 
                 if holderBindingAndMetaMatchSuccess {
                     metaAndBindingMatchingIds.append(credentialId)
@@ -296,5 +305,4 @@ internal struct DcqlEvaluator {
         
         return true
     }
-    
 }

@@ -273,4 +273,54 @@ final class MdocVPTokenBuilderTests: XCTestCase {
 
         XCTAssertEqual(result.count, 0)
     }
+
+    // MARK: - // VCI 1.0 compliant mDoc - DeviceSigned structure
+
+    func testBuildSuccessWithFormat1Mdoc() throws {
+        let signature = Data("mock-signature".utf8)
+        let mappings = [
+            CredentialInputDescriptorMapping(format: .mso_mdoc, credential: AnyCodable(sampleMdocFormat1), inputDescriptorId: "id-1", identifier: "uuid1")
+        ]
+        let unsignedResult: (vpTokenSigningPayload: VPTokenSigningPayload, unsignedVPTokens: [UnsignedVPToken]) = (
+            vpTokenSigningPayload: ["uuid1": deviceAuthBytes] as [String: String],
+            unsignedVPTokens: []
+        )
+        let signingResults = [VPTokenSigningResult(id: "uuid1", signedData: signature)]
+
+        let result = try builder.build(
+            credentialInputDescriptorMappings: mappings,
+            unsignedVPTokenResult: unsignedResult,
+            vpTokenSigningResults: signingResults,
+            rootIndex: 0
+        )
+
+        XCTAssertEqual(result.vpTokens.count, 1)
+        let mdocToken = try XCTUnwrap(result.vpTokens.first as? MdocVPToken)
+        XCTAssertFalse(mdocToken.base64EncodedDeviceResponse.isEmpty)
+        XCTAssertEqual(result.DescriptorMaps.count, 1)
+        XCTAssertEqual(result.DescriptorMaps[0].id, "id-1")
+        XCTAssertEqual(result.DescriptorMaps[0].format, .mso_mdoc)
+        XCTAssertEqual(result.nextIndex, 1)
+    }
+
+    func testDcqlBuildSuccessWithFormat1Mdoc() throws {
+        let signature = Data("mock-signature".utf8)
+        var mapping = CredentialToCredentialQueryIdMapping(format: .mso_mdoc, credential: AnyCodable(sampleMdocFormat1), credentialQueryId: "q1")
+        mapping.identifier = "uuid1"
+        let unsignedResult: (vpTokenSigningPayload: VPTokenSigningPayload, unsignedVPTokens: [UnsignedVPToken]) = (
+            vpTokenSigningPayload: ["uuid1": deviceAuthBytes] as [String: String],
+            unsignedVPTokens: []
+        )
+
+        let result = try builder.build(
+            credentialToCredentialQueryIdMappings: [mapping],
+            unsignedVPTokenResult: unsignedResult,
+            vpTokenSigningResults: [VPTokenSigningResult(id: "uuid1", signedData: signature)]
+        )
+
+        XCTAssertEqual(result.keys.sorted(), ["q1"])
+        XCTAssertEqual(result["q1"]?.count, 1)
+        let mdocToken = try XCTUnwrap(result["q1"]?.first as? MdocVPToken)
+        XCTAssertFalse(mdocToken.base64EncodedDeviceResponse.isEmpty)
+    }
 }
