@@ -255,7 +255,8 @@ final class WalletConfigTests: XCTestCase {
             "response_types_supported",
             "trusted_verifiers",
             "vp_formats_supported",
-            "validate_trusted_verifier"
+            "validate_trusted_verifier",
+            "verifier_trust_anchors"
         ].sorted())
     }
 
@@ -533,6 +534,46 @@ final class WalletConfigTests: XCTestCase {
         let metadata = try makeConfig(clientIdPrefixes: [.preRegistered, .decentralizedIdentifier]).toWalletMetadata(specVersion: .draft23)
         let schemes = try XCTUnwrap(metadata[WalletMetadataConstants.clientIdSchemesSupported] as? [String])
         XCTAssertEqual(schemes.sorted(), ["did", "pre-registered"])
+    }
+
+    func testToWalletMetadataDraft23LeavesOutX509Hash() throws {
+        let metadata = try makeConfig(clientIdPrefixes: [.preRegistered, .x509Hash]).toWalletMetadata(specVersion: .draft23)
+        let schemes = try XCTUnwrap(metadata[WalletMetadataConstants.clientIdSchemesSupported] as? [String])
+        XCTAssertEqual(schemes, ["pre-registered"])
+    }
+
+    func testToWalletMetadataV1ListsX509Hash() throws {
+        let metadata = try makeConfig(clientIdPrefixes: [.decentralizedIdentifier, .x509Hash]).toWalletMetadata(specVersion: .v1)
+        let prefixes = try XCTUnwrap(metadata[WalletMetadataConstants.clientIdPrefixesSupported] as? [String])
+        XCTAssertEqual(prefixes, ["decentralized_identifier", "x509_hash"])
+    }
+
+    func testDecodesX509HashPrefixAndVerifierTrustAnchors() throws {
+        let json = """
+        {
+          "client_id_prefixes_supported": ["x509_hash"],
+          "verifier_trust_anchors": ["MIIBCERT"]
+        }
+        """.data(using: .utf8)!
+
+        let decoded = try JSONDecoder().decode(WalletConfig.self, from: json)
+
+        XCTAssertEqual(decoded.clientIdPrefixesSupported, [.x509Hash])
+        XCTAssertEqual(decoded.verifierTrustAnchors, ["MIIBCERT"])
+    }
+
+    func testDecodingWithoutVerifierTrustAnchorsDefaultsToNone() throws {
+        let decoded = try JSONDecoder().decode(WalletConfig.self, from: "{}".data(using: .utf8)!)
+
+        XCTAssertEqual(decoded.verifierTrustAnchors, [])
+    }
+
+    func testLimitingRequestObjectSigningAlgValuesSupportedKeepsOnlyTheGivenAlgorithms() {
+        let config = WalletConfig(requestObjectSigningAlgValuesSupported: [.edDsa, .es256])
+
+        let limitedConfig = config.limitingRequestObjectSigningAlgValuesSupported(to: [.edDsa])
+
+        XCTAssertEqual(limitedConfig.requestObjectSigningAlgValuesSupported, [.edDsa])
     }
 
     func testToWalletMetadataDraft23VpFormatsUsesAlgValuesSupported() throws {

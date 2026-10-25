@@ -13,7 +13,9 @@ public struct WalletConfig: Codable {
     let isPresentationDefinitionUriSupported: Bool
     let trustedVerifiers: [Verifier]
     let validateTrustedVerifier: Bool
-    
+    // CA certificates for x509_hash Verifiers, each standard base64 of the DER encoding as in x5c
+    let verifierTrustAnchors: [String]
+
     enum CodingKeys: String, CodingKey {
         case vpFormatsSupported = "vp_formats_supported"
         case clientIdPrefixesSupported = "client_id_prefixes_supported"
@@ -24,6 +26,7 @@ public struct WalletConfig: Codable {
         case presentationDefinitionUriSupported = "presentation_definition_uri_supported"
         case trustedVerifiers = "trusted_verifiers"
         case validateTrustedVerifier = "validate_trusted_verifier"
+        case verifierTrustAnchors = "verifier_trust_anchors"
     }
     
     public init(
@@ -35,7 +38,8 @@ public struct WalletConfig: Codable {
         responseTypesSupported: [ResponseType] = WalletConfigDefaults.responseTypesSupported,
         isPresentationDefinitionUriSupported: Bool = WalletConfigDefaults.presentationDefinitionUriSupported,
         trustedVerifiers: [Verifier] = WalletConfigDefaults.trustedVerifiers,
-        validateTrustedVerifier: Bool = WalletConfigDefaults.validateTrustedVerifier
+        validateTrustedVerifier: Bool = WalletConfigDefaults.validateTrustedVerifier,
+        verifierTrustAnchors: [String] = WalletConfigDefaults.verifierTrustAnchors
     ) {
         self.vpFormatsSupported = vpFormatsSupported
         self.clientIdPrefixesSupported = clientIdPrefixesSupported
@@ -46,6 +50,7 @@ public struct WalletConfig: Codable {
         self.isPresentationDefinitionUriSupported = isPresentationDefinitionUriSupported
         self.trustedVerifiers = trustedVerifiers
         self.validateTrustedVerifier = validateTrustedVerifier
+        self.verifierTrustAnchors = verifierTrustAnchors
     }
     
     public init(from decoder: Decoder) throws {
@@ -59,6 +64,7 @@ public struct WalletConfig: Codable {
         self.isPresentationDefinitionUriSupported = try container.decodeIfPresent(Bool.self, forKey: .presentationDefinitionUriSupported) ?? WalletConfigDefaults.presentationDefinitionUriSupported
         self.trustedVerifiers = try container.decodeIfPresent([Verifier].self, forKey: .trustedVerifiers) ?? WalletConfigDefaults.trustedVerifiers
         self.validateTrustedVerifier = try container.decodeIfPresent(Bool.self, forKey: .validateTrustedVerifier) ?? WalletConfigDefaults.validateTrustedVerifier
+        self.verifierTrustAnchors = try container.decodeIfPresent([String].self, forKey: .verifierTrustAnchors) ?? WalletConfigDefaults.verifierTrustAnchors
     }
     
     private static func parseVPFormatsSupported(from container: KeyedDecodingContainer<CodingKeys>) throws -> [VPFormatType: VPFormatSupported] {
@@ -117,7 +123,7 @@ public struct WalletConfig: Codable {
                 }
                 walletMetadata[WalletMetadataConstants.presentationDefinitionUriSupported] = isPresentationDefinitionUriSupported
                 walletMetadata[MetadataConstants.vpFormatsSupported] = vpFormats
-                walletMetadata[WalletMetadataConstants.clientIdSchemesSupported] = clientIdPrefixesSupported.map { ClientIdPrefix.toClientIdScheme($0) }
+                walletMetadata[WalletMetadataConstants.clientIdSchemesSupported] = clientIdPrefixesSupported.compactMap { ClientIdPrefix.toClientIdScheme($0) }
                 if let requestObjectSigningAlgValuesSupported = requestObjectSigningAlgValuesSupported {
                     walletMetadata[WalletMetadataConstants.requestObjectSigningAlgValuesSupported] = requestObjectSigningAlgValuesSupported.map { $0.rawValue }
                 }
@@ -167,6 +173,22 @@ public struct WalletConfig: Codable {
         try container.encode(isPresentationDefinitionUriSupported, forKey: .presentationDefinitionUriSupported)
         try container.encode(trustedVerifiers, forKey: .trustedVerifiers)
         try container.encode(validateTrustedVerifier, forKey: .validateTrustedVerifier)
+        try container.encode(verifierTrustAnchors, forKey: .verifierTrustAnchors)
+    }
+
+    func limitingRequestObjectSigningAlgValuesSupported(to signatureAlgorithms: [SignatureAlgorithm]) -> WalletConfig {
+        return WalletConfig(
+            vpFormatsSupported: vpFormatsSupported,
+            clientIdPrefixesSupported: clientIdPrefixesSupported,
+            requestObjectSigningAlgValuesSupported: requestObjectSigningAlgValuesSupported?.filter { signatureAlgorithms.contains($0) },
+            authorizationEncryptionAlgValuesSupported: authorizationEncryptionAlgValuesSupported,
+            authorizationEncryptionEncValuesSupported: authorizationEncryptionEncValuesSupported,
+            responseTypesSupported: responseTypesSupported,
+            isPresentationDefinitionUriSupported: isPresentationDefinitionUriSupported,
+            trustedVerifiers: trustedVerifiers,
+            validateTrustedVerifier: validateTrustedVerifier,
+            verifierTrustAnchors: verifierTrustAnchors
+        )
     }
 }
 
@@ -202,4 +224,7 @@ struct WalletConfigDefaults {
     
     @usableFromInline
     static let validateTrustedVerifier: Bool = true
+    
+    @usableFromInline
+    static let verifierTrustAnchors: [String] = []
 }

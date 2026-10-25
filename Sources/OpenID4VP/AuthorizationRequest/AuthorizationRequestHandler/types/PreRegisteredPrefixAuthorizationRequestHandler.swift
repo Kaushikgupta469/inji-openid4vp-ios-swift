@@ -52,7 +52,8 @@ class PreRegisteredSchemeAuthorizationRequestHandler:  ClientIdPrefixBasedAuthor
         return true
     }
     
-    func extractPublicKey(keyId: String?, algorithm: String) async throws -> PublicKeyType {
+    func extractPublicKey(algorithm: String, jwsHeader: [String: Any]) async throws -> PublicKeyType {
+        let keyId = jwsHeader["kid"] as? String
         let preRegisteredClient = try verifier(clientId: super.clientId)
         if let jwksUri = preRegisteredClient.jwksUri {
             let jwkSet : JWKSet = try await resolveJwksFromUri(jwksUri, networkManager: self.networkManager, className: className)

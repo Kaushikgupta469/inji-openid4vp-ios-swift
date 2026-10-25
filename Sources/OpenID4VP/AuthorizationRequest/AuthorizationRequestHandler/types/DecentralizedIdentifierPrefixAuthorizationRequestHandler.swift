@@ -38,8 +38,8 @@ class DecentralizedIdentifierPrefixAuthorizationRequestHandler:  ClientIdPrefixB
         return false
     }
     
-    func extractPublicKey(keyId: String?, algorithm: String) async throws -> PublicKeyType {
-        guard let keyId = keyId else {
+    func extractPublicKey(algorithm: String, jwsHeader: [String: Any]) async throws -> PublicKeyType {
+        guard let keyId = jwsHeader["kid"] as? String else {
             throw InvalidData(message: "keyId is required to extract public key in \(clientIdPrefix()) client_id_prefix",
                               className: className,
                               code: OpenID4VPErrorCodes.invalidRequestObject)

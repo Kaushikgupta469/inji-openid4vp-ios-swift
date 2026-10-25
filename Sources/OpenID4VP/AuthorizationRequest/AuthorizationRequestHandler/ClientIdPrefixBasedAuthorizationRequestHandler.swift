@@ -5,20 +5,27 @@ protocol AbstractMethodsForClientIdPrefixBasedAuthorizationRequestHandler {
     func getWalletMetadata(walletConfig: WalletConfig) throws -> [String: Any]
     func isSignedRequestSupported() -> Bool
     func isUnsignedRequestSupported() throws -> Bool
-    func extractPublicKey(keyId: String?, algorithm: String) async throws -> PublicKeyType
+    /// Resolves the public key that verifies the signed Authorization Request from its JWS header.
+    func extractPublicKey(algorithm: String, jwsHeader: [String: Any]) async throws -> PublicKeyType
     func clientIdPrefix() -> String
     func confirmSpecVersionIdentifiedFromRequest() -> Bool
     /// Validates the authenticity of the client identifier.
     /// For example, ensures that a client claiming to use a specific prefix is actually authorized or trusted.
     func validateClientAuthenticity() throws
+    /// Signature algorithms this prefix verifies signed Authorization Requests with.
+    func supportedSignatureAlgorithms() -> [SignatureAlgorithm]
 }
 
 extension AbstractMethodsForClientIdPrefixBasedAuthorizationRequestHandler {
     func confirmSpecVersionIdentifiedFromRequest() -> Bool {
         return true
     }
-    
+
     func validateClientAuthenticity() throws {}
+
+    func supportedSignatureAlgorithms() -> [SignatureAlgorithm] {
+        return [.edDsa]
+    }
 }
 
 class ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass  {
@@ -36,6 +43,10 @@ class ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass  {
     var className = String(describing: ClientIdPrefixBasedAuthorizationRequestHandler.self)
     
     let errorMessageForMismatchedAcceptableType: String = "does not match any acceptable types"
+
+    private var prefixWalletConfig: WalletConfig {
+        return walletConfig.limitingRequestObjectSigningAlgValuesSupported(to: delegate.supportedSignatureAlgorithms())
+    }
     
     init(clientId: String,
          specVersion: SpecVersion,
@@ -187,7 +198,7 @@ class ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass  {
             try isClientIdPrefixSupported(walletConfig: walletConfig)
             
             do {
-                let processedWalletMetadata = try delegate.getWalletMetadata(walletConfig: walletConfig)
+                let processedWalletMetadata = try delegate.getWalletMetadata(walletConfig: prefixWalletConfig)
                 let jsonData = try JSONSerialization.data(withJSONObject: processedWalletMetadata)
                 let jsonStringifiedWalletMetadata = String(data: jsonData, encoding: .utf8) ?? ""
                 
@@ -272,7 +283,7 @@ class ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass  {
             
             try validateAuthorizationRequestSigningAlgorithm(algorithm)
             
-            let publicKey = try await delegate.extractPublicKey(keyId: header["kid"] as? String, algorithm: algorithm)
+            let publicKey = try await delegate.extractPublicKey(algorithm: algorithm, jwsHeader: header)
             try await JWSHandler.verify(jws: jwtRequest , publicKey: publicKey)
         } catch {
             throw InvalidData(message: "Request URI response validation failed - \(error.localizedDescription)", className: className, code: OpenID4VPErrorCodes.invalidRequestObject)
@@ -304,8 +315,9 @@ class ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass  {
     private func isClientIdPrefixSupported(walletConfig: WalletConfig) throws {
         let clientIdPrefix = delegate.clientIdPrefix()
         var walletSupportedClientIdPrefixes = walletConfig.clientIdPrefixesSupported.compactMap { $0.rawValue }
-        if walletSupportedClientIdPrefixes.contains(ClientIdPrefix.decentralizedIdentifier.rawValue) {
-            walletSupportedClientIdPrefixes.append(ClientIdPrefix.toClientIdScheme(.decentralizedIdentifier))
+        if walletSupportedClientIdPrefixes.contains(ClientIdPrefix.decentralizedIdentifier.rawValue),
+           let didClientIdScheme = ClientIdPrefix.toClientIdScheme(.decentralizedIdentifier) {
+            walletSupportedClientIdPrefixes.append(didClientIdScheme)
         }
         if !walletSupportedClientIdPrefixes.contains(clientIdPrefix) {
             throw InvalidData(
@@ -317,7 +329,7 @@ class ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass  {
     
     private func validateAuthorizationRequestSigningAlgorithm(_ algorithm: String) throws {
         if shouldValidateWithWalletMetadata {
-            let supportedAlgs = walletConfig.requestObjectSigningAlgValuesSupported?.compactMap({$0.rawValue}) ?? []
+            let supportedAlgs = prefixWalletConfig.requestObjectSigningAlgValuesSupported?.compactMap({$0.rawValue}) ?? []
             if !supportedAlgs.contains(algorithm) {
                 throw InvalidData(
                     message: "request_object_signing_alg is not supported by wallet",

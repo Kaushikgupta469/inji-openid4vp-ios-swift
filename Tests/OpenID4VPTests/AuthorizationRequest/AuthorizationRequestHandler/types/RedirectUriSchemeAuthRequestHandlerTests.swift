@@ -100,7 +100,7 @@ class RedirectUriSchemeAuthRequestHandlerTests : XCTestCase {
         let authorizationRequestParameters: [String : Any] = createAuthorizationRequest(paramList: authRequestWithPreRegisteredByValue , requestParams: mergeMaps(authorizationRequestParamsWithValue, redirectUriSchemeClientIdParameter)) as [String : Any]
         let handler = RedirectUriPrefixAuthorizationRequestHandler(clientId: clientId,specVersion: .v1, authorizationRequestParameters: authorizationRequestParameters, walletConfig: walletConfig, setResponseDispatchInfo: mockSetResponseDispatchInfo,walletNonce: "mock-nonce", networkManager: mockNetworkManager)
         
-        await XCTAssertAsyncThrowsError(try await handler.extractPublicKey(keyId: nil, algorithm: "edDsa")) { error in
+        await XCTAssertAsyncThrowsError(try await handler.extractPublicKey(algorithm: "edDsa", jwsHeader: [:])) { error in
             assertOpenID4VPException(error,
                                      expectedMessage: "Public key extraction is not supported for redirect_uri client_id_prefix",
                                      expectedCode: "unsupported_operation"

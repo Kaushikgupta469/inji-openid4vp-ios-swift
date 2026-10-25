@@ -209,7 +209,7 @@ class PreRegisteredClientIdPrefixTests : XCTestCase {
         let authorizationRequestParameters: [String : Any] = createAuthorizationRequest(paramList: authRequestWithPreRegisteredByValue, requestParams: mergeMaps(authorizationRequestParamsWithValue, ["client_id": "untrusted-client"])) as [String : Any]
         let preRegistered = PreRegisteredSchemeAuthorizationRequestHandler(clientId: "untrusted-client", specVersion: .v1, authorizationRequestParameters: authorizationRequestParameters, walletConfig: walletConfig,setResponseDispatchInfo: mockSetResponseDispatchInfo,walletNonce: "mock-nonce", networkManager: mockNetworkManager!)
         
-        await XCTAssertAsyncThrowsError(try await preRegistered.extractPublicKey(keyId: "ed-key2", algorithm: "ECDSA")){ error in
+        await XCTAssertAsyncThrowsError(try await preRegistered.extractPublicKey(algorithm: "ECDSA", jwsHeader: ["kid": "ed-key2"])){ error in
             assertOpenID4VPException(error, expectedMessage: "Verifier is not trusted by the wallet", expectedCode: OpenID4VPErrorCodes.invalidClient)
         }
     }
@@ -223,7 +223,7 @@ class PreRegisteredClientIdPrefixTests : XCTestCase {
         let preRegistered = PreRegisteredSchemeAuthorizationRequestHandler(clientId: clientId, specVersion: .v1, authorizationRequestParameters: authorizationRequestParameters, walletConfig: createWalletConfig(trustedVerifiers: trustedVerifiers),setResponseDispatchInfo: mockSetResponseDispatchInfo,walletNonce: "mock-nonce", networkManager: mockNetworkManager!)
         
         
-        await XCTAssertAsyncThrowsError(try await preRegistered.extractPublicKey(keyId: "ed-key2", algorithm: "EdDSA")){ error in
+        await XCTAssertAsyncThrowsError(try await preRegistered.extractPublicKey(algorithm: "EdDSA", jwsHeader: ["kid": "ed-key2"])){ error in
             assertOpenID4VPException(error, expectedMessage: "Public key extraction failed - Public key information not available in pre-registered data to verify the signed Authorization Request", expectedCode: OpenID4VPErrorCodes.invalidRequestObject)
         }
     }
@@ -251,7 +251,7 @@ class PreRegisteredClientIdPrefixTests : XCTestCase {
         )
         mockNetworkManager.setMockResponse(for: jwksUri, responseBody: jwkSet)
         
-        let publicKey = try await preRegistered.extractPublicKey(keyId: "ed-key2", algorithm: "Ed25519")
+        let publicKey = try await preRegistered.extractPublicKey(algorithm: "Ed25519", jwsHeader: ["kid": "ed-key2"])
         
         assertPublicKey(expectedBase64Encoded: "5tvU4k/TGAfDAru3LfS53qbfHzghjc0kvPGAb2VUwWc=", actualKey: publicKey)
     }
@@ -272,7 +272,7 @@ class PreRegisteredClientIdPrefixTests : XCTestCase {
         mockNetworkManager.setMockResponse(for: jwksUri, responseBody: jwkSet)
         
         
-        await XCTAssertNoThrowAndVerifyAsync(try await preRegistered.extractPublicKey(keyId: nil, algorithm: "EdDSA")) { publicKey in
+        await XCTAssertNoThrowAndVerifyAsync(try await preRegistered.extractPublicKey(algorithm: "EdDSA", jwsHeader: [:])) { publicKey in
             assertPublicKey(expectedBase64Encoded: "5tvU4k/TGAfDAru3LfS53qbfHzghjc0kvPGAb2VUwWc=", actualKey: publicKey)
         }
     }
@@ -305,7 +305,7 @@ class PreRegisteredClientIdPrefixTests : XCTestCase {
 """)
         
         
-        await XCTAssertAsyncThrowsError(try await preRegistered.extractPublicKey(keyId: nil, algorithm: "Ed25519")) { error in
+        await XCTAssertAsyncThrowsError(try await preRegistered.extractPublicKey(algorithm: "Ed25519", jwsHeader: [:])) { error in
             assertOpenID4VPException(error, expectedMessage: "No public key found for algorithm: Ed25519 with key use: signature", expectedCode: OpenID4VPErrorCodes.invalidRequestObject)
         }
     }
@@ -345,7 +345,7 @@ class PreRegisteredClientIdPrefixTests : XCTestCase {
 """)
         
         
-        await XCTAssertAsyncThrowsError(try await preRegistered.extractPublicKey(keyId: nil, algorithm: "EdDSA")) { error in
+        await XCTAssertAsyncThrowsError(try await preRegistered.extractPublicKey(algorithm: "EdDSA", jwsHeader: [:])) { error in
             assertOpenID4VPException(error, expectedMessage: "Public key extraction failed - Multiple ambiguous keys found for EdDSA with signature usage", expectedCode: OpenID4VPErrorCodes.invalidRequestObject)
         }
     }
@@ -363,7 +363,7 @@ class PreRegisteredClientIdPrefixTests : XCTestCase {
                                                                            walletNonce: "mock-nonce",
                                                                            networkManager: mockNetworkManager!
         )
-        await XCTAssertAsyncThrowsError(try await preRegistered.extractPublicKey(keyId: "ed-key2", algorithm: "ECDSA")) { error in
+        await XCTAssertAsyncThrowsError(try await preRegistered.extractPublicKey(algorithm: "ECDSA", jwsHeader: ["kid": "ed-key2"])) { error in
             assertOpenID4VPException(error, expectedMessage: "Verifier is not trusted by the wallet", expectedCode: OpenID4VPErrorCodes.invalidClient)
         }
     }
@@ -381,7 +381,7 @@ class PreRegisteredClientIdPrefixTests : XCTestCase {
                                                                            walletNonce: "mock-nonce",
                                                                            networkManager: mockNetworkManager!
         )
-        await XCTAssertAsyncThrowsError(try await preRegistered.extractPublicKey(keyId: nil, algorithm: "ECDSA")) { error in
+        await XCTAssertAsyncThrowsError(try await preRegistered.extractPublicKey(algorithm: "ECDSA", jwsHeader: [:])) { error in
             assertOpenID4VPException(error, expectedMessage: "Verifier is not trusted by the wallet", expectedCode: OpenID4VPErrorCodes.invalidClient)
         }
     }
@@ -402,7 +402,7 @@ class PreRegisteredClientIdPrefixTests : XCTestCase {
         mockNetworkManager.setMockResponse(for: jwksUri, responseBody: jwkSet)
         
         
-        await XCTAssertAsyncThrowsError(try await preRegistered.extractPublicKey(keyId: "non-existent-key", algorithm: "RS256")) { error in
+        await XCTAssertAsyncThrowsError(try await preRegistered.extractPublicKey(algorithm: "RS256", jwsHeader: ["kid": "non-existent-key"])) { error in
             assertOpenID4VPException(error, expectedMessage: "Public key extraction failed for kid: Optional(\"non-existent-key\")", expectedCode: OpenID4VPErrorCodes.invalidRequestObject)
         }
     }

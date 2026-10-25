@@ -30,7 +30,7 @@ class RedirectUriPrefixAuthorizationRequestHandler:  ClientIdPrefixBasedAuthoriz
         return true
     }
     
-    func extractPublicKey(keyId: String?, algorithm: String) async throws -> PublicKeyType {
+    func extractPublicKey(algorithm: String, jwsHeader: [String: Any]) async throws -> PublicKeyType {
         throw UnsupportedOperationException(message: "Public key extraction is not supported for redirect_uri client_id_prefix", className: className)
     }
     

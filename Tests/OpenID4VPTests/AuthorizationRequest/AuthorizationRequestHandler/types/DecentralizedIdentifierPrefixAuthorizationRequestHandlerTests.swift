@@ -71,7 +71,7 @@ class DecentralizedIdentifierPrefixAuthorizationRequestHandlerTests : XCTestCase
         let authorizationRequestParametersByReference: [String : Any] = createAuthorizationRequest(paramList: authRequestParamsByReference , requestParams: mergeMaps(authorizationRequestParamsWithValue, DidSchemeClientIdParameters[.v1]!)) as [String : Any]
         let didSchemeAuthRequestHandler = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: decentralizedIdentifierClientId, specVersion: .v1 ,authorizationRequestParameters: authorizationRequestParametersByReference, walletConfig: walletConfig, setResponseDispatchInfo: mockSetResponseDispatchInfo, walletNonce: "mock-nonce", networkManager: mockNetworkManager)
 
-        await XCTAssertNoThrowAndVerifyAsync(try await didSchemeAuthRequestHandler.extractPublicKey(keyId: JWSUtil.publicKeyId, algorithm: "EdDSA")){ publicKey in
+        await XCTAssertNoThrowAndVerifyAsync(try await didSchemeAuthRequestHandler.extractPublicKey(algorithm: "EdDSA", jwsHeader: ["kid": JWSUtil.publicKeyId])){ publicKey in
             assertPublicKey(expectedBase64Encoded: "+Fy3lMapzR3wpaYNCFq29GDEn/NoR3pBsc511q1Cxqw=", actualKey: publicKey)
         }
         
@@ -80,7 +80,7 @@ class DecentralizedIdentifierPrefixAuthorizationRequestHandlerTests : XCTestCase
         let authorizationRequestParametersByReferenceDraft23: [String : Any] = createAuthorizationRequest(paramList: authRequestParamsByReference , requestParams: mergeMaps(authorizationRequestParamsWithValue, DidSchemeClientIdParameters[.draft23]!), specVersion: .draft23) as [String : Any]
         let didSchemeAuthRequestHandler2 = DecentralizedIdentifierPrefixAuthorizationRequestHandler(clientId: didUrl, specVersion: .draft23 ,authorizationRequestParameters: authorizationRequestParametersByReferenceDraft23, walletConfig: walletConfig, setResponseDispatchInfo: mockSetResponseDispatchInfo, walletNonce: "mock-nonce", networkManager: mockNetworkManager)
 
-        await XCTAssertNoThrowAndVerifyAsync(try await didSchemeAuthRequestHandler2.extractPublicKey(keyId: JWSUtil.publicKeyId, algorithm: "EdDSA")){ publicKey in
+        await XCTAssertNoThrowAndVerifyAsync(try await didSchemeAuthRequestHandler2.extractPublicKey(algorithm: "EdDSA", jwsHeader: ["kid": JWSUtil.publicKeyId])){ publicKey in
             assertPublicKey(expectedBase64Encoded: "+Fy3lMapzR3wpaYNCFq29GDEn/NoR3pBsc511q1Cxqw=", actualKey: publicKey)
         }
     }

@@ -406,7 +406,32 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
             }
         }
     }
-    
+
+    func testShouldListOnlyTheSigningAlgorithmsTheClientIdPrefixVerifiesInWalletMetadataSentByRequestUriPost() async throws {
+        mockNetworkManager.clearResponses()
+        let authorizationRequestParametersByReference: [String : Any] = createAuthorizationRequest(paramList: authRequestParamsByReference , requestParams: mergeMaps(authorizationRequestParamsWithValue, DidSchemeClientIdParameters[.v1]!, ["request_uri_method": "post"]), specVersion: .v1) as [String : Any]
+        let requestUriResponse = createRequestUriResponse(createAuthorizationRequestObject(clientIdPrefix: .decentralizedIdentifier, authorizationRequestParams: mergeMaps(authorizationRequestParamsWithValue, DidSchemeClientIdParameters[.v1]!, ["wallet_nonce": "mock-nonce"]), applicableFields: authRequestWithDidByValue + ["wallet_nonce"]) )
+        mockNetworkManager.setMockResponse(for: "https://mock-verifier.com/verifier/get-auth-request-obj",response: (responseBody: requestUriResponse.body, httpUrlResponse: requestUriResponse.httpUrlResponse))
+        mockNetworkManager.setMockResponse(for: didDocumentUrl,responseBody: didResponse)
+        let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
+            authorizationRequestParameters: authorizationRequestParametersByReference,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
+            walletNonce: "mock-nonce",
+            networkManager: mockNetworkManager,
+            clientId: "mock-client-id",
+            specVersion: .v1,
+            walletConfig: createWalletConfig(requestObjectSigningAlgValuesSupported: [.edDsa, .es256]),
+            isSignedRequestSupported: true,
+            isUnsignedRequestSupported: true
+        )
+
+        await XCTAssertAsyncNoThrowsError(try await mockAuthHandler.fetchAuthorizationRequest())
+
+        let walletMetadataJson = try XCTUnwrap(mockNetworkManager.recordedRequests[requestUri.absoluteString]?.requestBody?["wallet_metadata"])
+        let walletMetadata = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(walletMetadataJson.utf8)) as? [String: Any])
+        XCTAssertEqual(walletMetadata["request_object_signing_alg_values_supported"] as? [String], ["EdDSA"])
+    }
+
     func testShouldMakeApiCallToRequestUriPostWithCorrectAcceptTypeAndContentTypeWhenWalletMetadataIsNotAvailable() async {
         mockNetworkManager.clearResponses()
         let authorizationRequestParametersByReference: [String : Any] = createAuthorizationRequest(paramList: authRequestParamsByReference , requestParams: mergeMaps(authorizationRequestParamsWithValue, DidSchemeClientIdParameters[.v1]!, ["request_uri_method": "post"]), specVersion: .v1) as [String : Any]

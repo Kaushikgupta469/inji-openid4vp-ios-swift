@@ -107,6 +107,14 @@ func getAuthorizationRequestHandler(authorizationRequestParameters: [String:Any]
                                                             setResponseDispatchInfo: setResponseDispatchInfo,
                                                             walletNonce: walletNonce,
                                                             networkManager: networkManager)
+    case ClientIdPrefix.x509Hash.rawValue:
+        return X509HashPrefixAuthorizationRequestHandler(clientId: clientId,
+                                                         specVersion: specVersion,
+                                                         authorizationRequestParameters: authorizationRequestParameters,
+                                                         walletConfig: walletConfig,
+                                                         setResponseDispatchInfo: setResponseDispatchInfo,
+                                                         walletNonce: walletNonce,
+                                                         networkManager: networkManager)
     default:
         // If the client ID prefix is unrecognized, fallback to pre-registered scheme handler
         return PreRegisteredSchemeAuthorizationRequestHandler(clientId: clientId,
