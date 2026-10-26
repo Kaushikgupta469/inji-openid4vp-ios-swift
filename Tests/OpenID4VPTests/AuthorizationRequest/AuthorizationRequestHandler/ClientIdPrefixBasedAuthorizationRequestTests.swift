@@ -422,7 +422,8 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
             specVersion: .v1,
             walletConfig: createWalletConfig(requestObjectSigningAlgValuesSupported: [.edDsa, .es256]),
             isSignedRequestSupported: true,
-            isUnsignedRequestSupported: true
+            isUnsignedRequestSupported: true,
+            supportedSignatureAlgorithms: [.edDsa]
         )
 
         await XCTAssertAsyncNoThrowsError(try await mockAuthHandler.fetchAuthorizationRequest())
@@ -430,6 +431,31 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         let walletMetadataJson = try XCTUnwrap(mockNetworkManager.recordedRequests[requestUri.absoluteString]?.requestBody?["wallet_metadata"])
         let walletMetadata = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(walletMetadataJson.utf8)) as? [String: Any])
         XCTAssertEqual(walletMetadata["request_object_signing_alg_values_supported"] as? [String], ["EdDSA"])
+    }
+
+    func testShouldListEdDsaAndES256InWalletMetadataSentByRequestUriPostByDefault() async throws {
+        mockNetworkManager.clearResponses()
+        let authorizationRequestParametersByReference: [String : Any] = createAuthorizationRequest(paramList: authRequestParamsByReference , requestParams: mergeMaps(authorizationRequestParamsWithValue, DidSchemeClientIdParameters[.v1]!, ["request_uri_method": "post"]), specVersion: .v1) as [String : Any]
+        let requestUriResponse = createRequestUriResponse(createAuthorizationRequestObject(clientIdPrefix: .decentralizedIdentifier, authorizationRequestParams: mergeMaps(authorizationRequestParamsWithValue, DidSchemeClientIdParameters[.v1]!, ["wallet_nonce": "mock-nonce"]), applicableFields: authRequestWithDidByValue + ["wallet_nonce"]) )
+        mockNetworkManager.setMockResponse(for: "https://mock-verifier.com/verifier/get-auth-request-obj",response: (responseBody: requestUriResponse.body, httpUrlResponse: requestUriResponse.httpUrlResponse))
+        mockNetworkManager.setMockResponse(for: didDocumentUrl,responseBody: didResponse)
+        let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
+            authorizationRequestParameters: authorizationRequestParametersByReference,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
+            walletNonce: "mock-nonce",
+            networkManager: mockNetworkManager,
+            clientId: "mock-client-id",
+            specVersion: .v1,
+            walletConfig: createWalletConfig(requestObjectSigningAlgValuesSupported: [.edDsa, .es256]),
+            isSignedRequestSupported: true,
+            isUnsignedRequestSupported: true
+        )
+
+        await XCTAssertAsyncNoThrowsError(try await mockAuthHandler.fetchAuthorizationRequest())
+
+        let walletMetadataJson = try XCTUnwrap(mockNetworkManager.recordedRequests[requestUri.absoluteString]?.requestBody?["wallet_metadata"])
+        let walletMetadata = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(walletMetadataJson.utf8)) as? [String: Any])
+        XCTAssertEqual(walletMetadata["request_object_signing_alg_values_supported"] as? [String], ["EdDSA", "ES256"])
     }
 
     func testShouldMakeApiCallToRequestUriPostWithCorrectAcceptTypeAndContentTypeWhenWalletMetadataIsNotAvailable() async {
@@ -768,6 +794,62 @@ final class ClientIdPrefixBasedAuthorizationRequestTests : XCTestCase {
         }
     }
 
+    func testThrowErrorWhenRequestUriResponseJWTHeaderHasAnAlgorithmThePrefixDoesNotVerify() async throws {
+        let authorizationRequestParametersByReference: [String : Any] = createAuthorizationRequest(paramList: authRequestParamsByReference , requestParams: mergeMaps(authorizationRequestParamsWithValue, DidSchemeClientIdParameters[.v1]!), specVersion: .v1) as [String : Any]
+        
+        let jwtWithAlgNone = "eyJ0eXAiOiJvYXV0aC1hdXRoei1yZXErand0IiwiYWxnIjoibm9uZSJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.c2ln"
+        let requestUriResponse = createRequestUriResponse(jwtWithAlgNone)
+        mockNetworkManager.setMockResponse(for: requestUri.absoluteString,response: (responseBody: requestUriResponse.body, httpUrlResponse: requestUriResponse.httpUrlResponse))
+        mockNetworkManager.setMockResponse(for: didDocumentUrl,responseBody: didResponse)
+        
+        let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
+            authorizationRequestParameters: authorizationRequestParametersByReference,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
+            walletNonce: "mock-nonce",
+            networkManager: mockNetworkManager,
+            clientId: "mock-client-id",
+            specVersion: .v1,
+            walletConfig: walletConfig,
+            isSignedRequestSupported: true,
+            isUnsignedRequestSupported: true
+        )
+        
+        await XCTAssertAsyncThrowsError(try await mockAuthHandler.fetchAuthorizationRequest()){ error in
+            assertOpenID4VPException(error,
+                                     expectedMessage: "Request URI response validation failed - Signing algorithm 'none' is not supported",
+                                     expectedCode: OpenID4VPErrorCodes.invalidRequestObject
+            )
+        }
+    }
+    
+    func testThrowErrorWhenRequestUriResponseJWTIsSignedWithAnAlgorithmTheWalletDoesNotList() async throws {
+        let authorizationRequestParametersByReference: [String : Any] = createAuthorizationRequest(paramList: authRequestParamsByReference , requestParams: mergeMaps(authorizationRequestParamsWithValue, DidSchemeClientIdParameters[.v1]!), specVersion: .v1) as [String : Any]
+        
+        let jwtSignedWithES256 = "eyJ0eXAiOiJvYXV0aC1hdXRoei1yZXErand0IiwiYWxnIjoiRVMyNTYifQ.eyJzdWIiOiIxMjM0NTY3ODkwIn0.c2ln"
+        let requestUriResponse = createRequestUriResponse(jwtSignedWithES256)
+        mockNetworkManager.setMockResponse(for: requestUri.absoluteString,response: (responseBody: requestUriResponse.body, httpUrlResponse: requestUriResponse.httpUrlResponse))
+        mockNetworkManager.setMockResponse(for: didDocumentUrl,responseBody: didResponse)
+        
+        let mockAuthHandler = MockClientIdPrefixAuthRequestHandler(
+            authorizationRequestParameters: authorizationRequestParametersByReference,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
+            walletNonce: "mock-nonce",
+            networkManager: mockNetworkManager,
+            clientId: "mock-client-id",
+            specVersion: .v1,
+            walletConfig: createWalletConfig(requestObjectSigningAlgValuesSupported: [.edDsa]),
+            isSignedRequestSupported: true,
+            isUnsignedRequestSupported: true
+        )
+        
+        await XCTAssertAsyncThrowsError(try await mockAuthHandler.fetchAuthorizationRequest()){ error in
+            assertOpenID4VPException(error,
+                                     expectedMessage: "Request URI response validation failed - request_object_signing_alg is not supported by wallet",
+                                     expectedCode: OpenID4VPErrorCodes.invalidRequestObject
+            )
+        }
+    }
+    
     func testThrowErrorWhenRequestUriReponseJWTHeaderDoesNotHaveAlgClaim() async throws {
         let authorizationRequestParametersByReference: [String : Any] = createAuthorizationRequest(paramList: authRequestParamsByReference , requestParams: mergeMaps(authorizationRequestParamsWithValue, DidSchemeClientIdParameters[.v1]!), specVersion: .v1) as [String : Any]
         

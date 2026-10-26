@@ -36,11 +36,6 @@ class X509HashPrefixAuthorizationRequestHandler: ClientIdPrefixBasedAuthorizatio
         return ClientIdPrefix.x509Hash.rawValue
     }
 
-    // ES256 as HAIP 1.0 requires, EdDSA for Verifiers with Ed25519 keys
-    func supportedSignatureAlgorithms() -> [SignatureAlgorithm] {
-        return [.es256, .edDsa]
-    }
-
     override func validateClientId() throws {
         guard walletConfig.clientIdPrefixesSupported.contains(.x509Hash) else {
             throw InvalidData(
@@ -69,7 +64,6 @@ class X509HashPrefixAuthorizationRequestHandler: ClientIdPrefixBasedAuthorizatio
     }
 
     func extractPublicKey(algorithm: String, jwsHeader: [String: Any]) async throws -> PublicKeyType {
-        try validateAlgorithmAllowed(algorithm)
         let certificateChainBytes = try extractCertificateChainBytes(jwsHeader)
 
         guard Data(SHA256.hash(data: certificateChainBytes[0])).toBase64UrlEncoded() == certificateHash else {
@@ -107,16 +101,6 @@ class X509HashPrefixAuthorizationRequestHandler: ClientIdPrefixBasedAuthorizatio
         var walletMetadata = try walletConfig.toWalletMetadata(specVersion: specVersion)
         walletMetadata[WalletMetadataConstants.requestObjectSigningAlgValuesSupported] = signingAlgorithms
         return walletMetadata
-    }
-
-    // Also needed for requests by value: the base class checks the algorithm only after a request_uri POST
-    private func validateAlgorithmAllowed(_ algorithm: String) throws {
-        guard supportedSignatureAlgorithms().contains(where: { $0.rawValue == algorithm }) else {
-            throw invalidRequestObject("Signing algorithm '\(algorithm)' is not supported")
-        }
-        guard walletConfig.requestObjectSigningAlgValuesSupported?.contains(where: { $0.rawValue == algorithm }) == true else {
-            throw invalidRequestObject("request_object_signing_alg is not supported by wallet")
-        }
     }
 
     private func extractCertificateChainBytes(_ jwsHeader: [String: Any]) throws -> [Data] {
