@@ -160,7 +160,7 @@ class X509HashPrefixAuthorizationRequestHandler: ClientIdPrefixBasedAuthorizatio
     private func validateTrustChain(leafCertificate: Certificate, certificateChainBytes: [Data]) throws {
         let trustAnchors = try parseTrustAnchors()
         if trustAnchors.isEmpty {
-            throw invalidRequestObject("No trust anchors are configured to validate the x5c certificate chain")
+            throw invalidRequestObject("No trust anchors are configured to validate the x5c certificate chain", notifyVerifier: false)
         }
         do {
             try validateCertificationPath(certificateChainBytes, trustAnchors: trustAnchors)
@@ -179,14 +179,15 @@ class X509HashPrefixAuthorizationRequestHandler: ClientIdPrefixBasedAuthorizatio
             guard let trustAnchorBytes = decodeBase64IgnoringWhitespace(trustAnchor),
                   let certificate = SecCertificateCreateWithData(nil, trustAnchorBytes as CFData) else {
                 throw invalidRequestObject(
-                    "verifierTrustAnchors[\(index)] in the wallet configuration is not a base64-encoded DER X.509 certificate"
+                    "verifierTrustAnchors[\(index)] in the wallet configuration is not a base64-encoded DER X.509 certificate",
+                    notifyVerifier: false
                 )
             }
             return certificate
         }
     }
 
-    private func invalidRequestObject(_ message: String) -> InvalidData {
-        return InvalidData(message: message, className: className, code: OpenID4VPErrorCodes.invalidRequestObject)
+    private func invalidRequestObject(_ message: String, notifyVerifier: Bool = true) -> InvalidData {
+        return InvalidData(message: message, className: className, code: OpenID4VPErrorCodes.invalidRequestObject, notifyVerifier: notifyVerifier)
     }
 }

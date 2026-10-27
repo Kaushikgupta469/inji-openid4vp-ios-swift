@@ -286,7 +286,7 @@ class ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass  {
             let publicKey = try await delegate.extractPublicKey(algorithm: algorithm, jwsHeader: header)
             try await JWSHandler.verify(jws: jwtRequest , publicKey: publicKey)
         } catch {
-            throw InvalidData(message: "Request URI response validation failed - \(error.localizedDescription)", className: className, code: OpenID4VPErrorCodes.invalidRequestObject)
+            throw InvalidData(message: "Request URI response validation failed - \(error.localizedDescription)", className: className, code: OpenID4VPErrorCodes.invalidRequestObject, notifyVerifier: (error as? OpenID4VPException)?.notifyVerifier ?? true)
         }
     }
     

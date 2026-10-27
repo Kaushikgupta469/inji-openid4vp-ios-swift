@@ -298,6 +298,14 @@ class X509HashPrefixAuthorizationRequestHandlerTests: XCTestCase {
         )
     }
 
+    func testShouldNotNotifyTheVerifierWhenNoTrustAnchorsAreConfigured() async {
+        walletConfig = makeWalletConfig(verifierTrustAnchors: [])
+
+        await XCTAssertAsyncThrowsError(try await createHandler(requestByValue(signedRequestObject(), clientId: nil)).handle()) { error in
+            XCTAssertEqual((error as? OpenID4VPException)?.notifyVerifier, false)
+        }
+    }
+
     func testShouldRejectTheRequestWhenAConfiguredTrustAnchorIsNotACertificate() async {
         walletConfig = makeWalletConfig(verifierTrustAnchors: [X509HashTestData.rootCertificateAuthority.x5cEntry, "not a certificate"])
 
@@ -305,6 +313,14 @@ class X509HashPrefixAuthorizationRequestHandlerTests: XCTestCase {
             signedRequestObject(),
             expectedMessage: "verifierTrustAnchors[1] in the wallet configuration is not a base64-encoded DER X.509 certificate"
         )
+    }
+
+    func testShouldNotNotifyTheVerifierWhenAConfiguredTrustAnchorIsNotACertificate() async {
+        walletConfig = makeWalletConfig(verifierTrustAnchors: ["not a certificate"])
+
+        await XCTAssertAsyncThrowsError(try await createHandler(requestByValue(signedRequestObject(), clientId: nil)).handle()) { error in
+            XCTAssertEqual((error as? OpenID4VPException)?.notifyVerifier, false)
+        }
     }
 
     func testShouldRejectALeafCertificateIssuedByACAThatIsNotATrustAnchor() async {
