@@ -126,7 +126,7 @@ class X509HashPrefixAuthorizationRequestHandlerTests: XCTestCase {
     func testShouldRejectTheRequestWhenTheSigningAlgorithmIsNotSupported() async {
         await assertRequestObjectRejected(
             signedRequestObject(alg: "ES384"),
-            expectedMessage: "Signing algorithm 'ES384' is not supported"
+            expectedMessage: "request_object_signing_alg is not supported by wallet"
         )
     }
 

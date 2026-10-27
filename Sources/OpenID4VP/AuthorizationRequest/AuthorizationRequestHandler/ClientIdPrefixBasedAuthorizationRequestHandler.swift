@@ -328,18 +328,18 @@ class ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass  {
     }
     
     private func validateAuthorizationRequestSigningAlgorithm(_ algorithm: String) throws {
-        guard delegate.supportedSignatureAlgorithms().contains(where: { $0.rawValue == algorithm }) else {
-            throw InvalidData(
-                message: "Signing algorithm '\(algorithm)' is not supported",
-                className: className,
-                code: OpenID4VPErrorCodes.invalidRequestObject
-            )
-        }
         let supportedAlgs = walletConfig.requestObjectSigningAlgValuesSupported?.compactMap({$0.rawValue}) ?? []
         if !supportedAlgs.contains(algorithm) {
             throw InvalidData(
                 message: "request_object_signing_alg is not supported by wallet",
                 className: className
+            )
+        }
+        guard delegate.supportedSignatureAlgorithms().contains(where: { $0.rawValue == algorithm }) else {
+            throw InvalidData(
+                message: "Signing algorithm '\(algorithm)' is not supported",
+                className: className,
+                code: OpenID4VPErrorCodes.invalidRequestObject
             )
         }
     }
