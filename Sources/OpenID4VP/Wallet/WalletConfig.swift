@@ -13,7 +13,6 @@ public struct WalletConfig: Codable {
     let isPresentationDefinitionUriSupported: Bool
     let trustedVerifiers: [Verifier]
     let validateTrustedVerifier: Bool
-    // CA certificates for x509_hash Verifiers, each standard base64 of the DER encoding as in x5c
     let verifierTrustAnchors: [String]
 
     enum CodingKeys: String, CodingKey {

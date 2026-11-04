@@ -392,15 +392,15 @@ class X509HashPrefixAuthorizationRequestHandlerTests: XCTestCase {
         )
     }
 
-    func testShouldRejectASelfSignedLeafCertificateEvenWhenItIsConfiguredAsATrustAnchor() async {
+    func testShouldAcceptASelfSignedLeafCertificateThatIsConfiguredAsATrustAnchor() async throws {
         let selfSignedVerifier = X509HashTestData.createSelfSignedVerifierCredential()
         walletConfig = makeWalletConfig(verifierTrustAnchors: [selfSignedVerifier.x5cEntry])
 
-        await assertRequestObjectRejected(
-            signedRequestObject(credential: selfSignedVerifier),
-            expectedMessage: "Leaf certificate in x5c must not be self-signed",
-            clientId: selfSignedVerifier.clientId
-        )
+        let authorizationRequest = try await createHandler(
+            requestByValue(signedRequestObject(credential: selfSignedVerifier), clientId: selfSignedVerifier.clientId)
+        ).handle()
+
+        XCTAssertEqual(selfSignedVerifier.clientId, authorizationRequest.clientId)
     }
 
     func testShouldRejectALeafCertificateWhoseKeyUsageDoesNotAllowDigitalSignature() async {

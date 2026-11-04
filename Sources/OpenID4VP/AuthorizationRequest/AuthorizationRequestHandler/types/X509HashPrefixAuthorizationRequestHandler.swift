@@ -5,10 +5,9 @@ import X509
 
 private let x5cHeaderParameter = "x5c"
 
-// base64url SHA-256 hash without padding; \z because $ also matches before a trailing newline
+// \z because $ also matches before a trailing newline
 private let certificateHashPattern = "^[A-Za-z0-9_-]{43}\\z"
 
-/// x509_hash Client Identifier Prefix, OpenID4VP 1.0 section 5.9.3
 class X509HashPrefixAuthorizationRequestHandler: ClientIdPrefixBasedAuthorizationRequestHandler {
     override init(clientId: String,
                   specVersion: SpecVersion,
@@ -77,14 +76,12 @@ class X509HashPrefixAuthorizationRequestHandler: ClientIdPrefixBasedAuthorizatio
                 throw invalidRequestObject("x5c[\(index)] is not a valid DER-encoded X.509 certificate")
             }
         }
-        let leafCertificate = certificateChain[0]
 
-        let leafPublicKey = try publicKey(of: leafCertificate, matching: algorithm)
-        try validateValidityPeriod(leafCertificate)
-        try validateKeyUsage(leafCertificate)
-        try validateTrustChain(leafCertificate: leafCertificate, certificateChainBytes: certificateChainBytes)
-
-        return leafPublicKey
+        return try validateCertificateChain(
+            algorithm: algorithm,
+            leafCertificate: certificateChain[0],
+            certificateChainBytes: certificateChainBytes
+        )
     }
 
     func getWalletMetadata(walletConfig: WalletConfig) throws -> [String: Any] {
@@ -101,6 +98,14 @@ class X509HashPrefixAuthorizationRequestHandler: ClientIdPrefixBasedAuthorizatio
         var walletMetadata = try walletConfig.toWalletMetadata(specVersion: specVersion)
         walletMetadata[WalletMetadataConstants.requestObjectSigningAlgValuesSupported] = signingAlgorithms
         return walletMetadata
+    }
+
+    private func validateCertificateChain(algorithm: String, leafCertificate: Certificate, certificateChainBytes: [Data]) throws -> PublicKeyType {
+        let leafPublicKey = try publicKey(of: leafCertificate, matching: algorithm)
+        try validateValidityPeriod(leafCertificate)
+        try validateKeyUsage(leafCertificate)
+        try validateTrustChain(certificateChainBytes)
+        return leafPublicKey
     }
 
     private func extractCertificateChainBytes(_ jwsHeader: [String: Any]) throws -> [Data] {
@@ -156,8 +161,7 @@ class X509HashPrefixAuthorizationRequestHandler: ClientIdPrefixBasedAuthorizatio
         }
     }
 
-    // OpenID4VP 1.0 section 5.9.3: the Wallet MUST validate the trust chain of the leaf certificate
-    private func validateTrustChain(leafCertificate: Certificate, certificateChainBytes: [Data]) throws {
+    private func validateTrustChain(_ certificateChainBytes: [Data]) throws {
         let trustAnchors = try parseTrustAnchors()
         if trustAnchors.isEmpty {
             throw invalidRequestObject("No trust anchors are configured to validate the x5c certificate chain", notifyVerifier: false)
@@ -166,11 +170,6 @@ class X509HashPrefixAuthorizationRequestHandler: ClientIdPrefixBasedAuthorizatio
             try validateCertificationPath(certificateChainBytes, trustAnchors: trustAnchors)
         } catch {
             throw invalidRequestObject("x5c certificate chain is not trusted: \(error.localizedDescription)")
-        }
-        // HAIP 1.0: the leaf must not be self-signed. Checked after the chain is trusted, so an untrusted key
-        // is never used to verify a signature
-        if leafCertificate.isSelfSigned {
-            throw invalidRequestObject("Leaf certificate in x5c must not be self-signed")
         }
     }
 

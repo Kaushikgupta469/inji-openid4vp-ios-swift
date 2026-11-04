@@ -21,8 +21,6 @@ struct CertificationPathValidationFailure: LocalizedError {
     }
 }
 
-/// Validates the chain (DER, leaf first) to one of the trust anchors with SecTrust, as the EUDI iOS wallet does.
-/// Revocation is not checked and missing certificates are not fetched.
 func validateCertificationPath(_ certificateChain: [Data], trustAnchors: [SecCertificate]) throws {
     let certificates = certificateChain.compactMap { SecCertificateCreateWithData(nil, $0 as CFData) }
     guard !certificates.isEmpty, certificates.count == certificateChain.count else {
@@ -41,11 +39,5 @@ func validateCertificationPath(_ certificateChain: [Data], trustAnchors: [SecCer
         throw CertificationPathValidationFailure(
             reason: (error as Error?)?.localizedDescription ?? "The certificate chain is not trusted"
         )
-    }
-}
-
-extension Certificate {
-    var isSelfSigned: Bool {
-        return issuer == subject && publicKey.isValidSignature(signature, for: self)
     }
 }

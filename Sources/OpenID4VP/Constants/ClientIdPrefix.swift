@@ -10,7 +10,6 @@ public enum ClientIdPrefix: String, Codable, CaseIterable {
         return ClientIdPrefix(rawValue: value)
     }
 
-    // Returns nil when Draft 23 defines no Client Identifier Scheme for the prefix
     static func toClientIdScheme(_ clientIdPrefix: ClientIdPrefix) -> String? {
         switch clientIdPrefix {
         case .preRegistered:

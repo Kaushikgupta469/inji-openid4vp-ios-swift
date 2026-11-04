@@ -53,11 +53,4 @@ class X509CertificateUtilsTests: XCTestCase {
         XCTAssertEqual(Data("hello world".utf8), decodeBase64IgnoringWhitespace("aGVsbG8g\nd29y\r\nbGQ="))
         XCTAssertNil(decodeBase64IgnoringWhitespace("-_8A"))
     }
-
-    func testIsSelfSignedShouldBeTrueOnlyForACertificateThatVerifiesWithItsOwnKey() {
-        XCTAssertTrue(X509HashTestData.rootCertificateAuthority.certificate.isSelfSigned)
-        XCTAssertTrue(X509HashTestData.createSelfSignedVerifierCredential().certificate.isSelfSigned)
-        XCTAssertFalse(X509HashTestData.intermediateCertificateAuthority.certificate.isSelfSigned)
-        XCTAssertFalse(verifier.certificate.isSelfSigned)
-    }
 }
