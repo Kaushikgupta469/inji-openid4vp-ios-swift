@@ -40,4 +40,30 @@ func validateCertificationPath(_ certificateChain: [Data], trustAnchors: [SecCer
             reason: (error as Error?)?.localizedDescription ?? "The certificate chain is not trusted"
         )
     }
+    // The trust anchor must be a CA that is allowed to sign certificates
+    if let trustAnchor = evaluatedCertificateChain(of: trust).last,
+       SecCertificateCopyData(trustAnchor) as Data != certificateChain[0] {
+        try validateTrustAnchorCanSignCertificates(trustAnchor)
+    }
+}
+
+private func evaluatedCertificateChain(of trust: SecTrust) -> [SecCertificate] {
+    if #available(iOS 15.0, macOS 12.0, *) {
+        return SecTrustCopyCertificateChain(trust) as? [SecCertificate] ?? []
+    }
+    return (0..<SecTrustGetCertificateCount(trust)).compactMap { SecTrustGetCertificateAtIndex(trust, $0) }
+}
+
+private func validateTrustAnchorCanSignCertificates(_ trustAnchor: SecCertificate) throws {
+    guard let certificate = try? Certificate(derEncoded: Array(SecCertificateCopyData(trustAnchor) as Data)) else {
+        throw CertificationPathValidationFailure(reason: "The trust anchor could not be read")
+    }
+    guard case .some(.isCertificateAuthority) = try? certificate.extensions.basicConstraints else {
+        throw CertificationPathValidationFailure(reason: "Trust anchor \(certificate.subject) is not a CA certificate")
+    }
+    if let keyUsage = try? certificate.extensions.keyUsage, !keyUsage.keyCertSign {
+        throw CertificationPathValidationFailure(
+            reason: "Key usage of trust anchor \(certificate.subject) does not allow keyCertSign"
+        )
+    }
 }

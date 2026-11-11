@@ -201,6 +201,16 @@ class X509HashPrefixAuthorizationRequestHandlerTests: XCTestCase {
         )
     }
 
+    func testShouldRejectTheRequestWhenX5cLeafContainsWhitespace() async {
+        var header = X509HashTestData.requestObjectHeader(verifier)
+        header["x5c"] = [wrappedOverSeveralLines(verifier.x5cEntry)]
+
+        await assertRequestObjectRejected(
+            signedRequestObject(header: header),
+            expectedMessage: "x5c[0] must be a base64-encoded DER X.509 certificate"
+        )
+    }
+
     func testShouldRejectTheRequestWhenItIsNotSignedWithTheLeafCertificateKey() async {
         await XCTAssertAsyncThrowsError(
             try await createHandler(requestByValue(signedRequestObject(signingKey: .p256(P256.Signing.PrivateKey())))).handle()
@@ -383,6 +393,59 @@ class X509HashPrefixAuthorizationRequestHandlerTests: XCTestCase {
         )
     }
 
+    func testShouldRejectALeafCertificateIssuedByAConfiguredTrustAnchorThatIsNotACA() async throws {
+        guard case .p256(let verifierPrivateKey) = verifier.signingKey else {
+            return XCTFail("The default test Verifier has a P-256 key")
+        }
+        let verifierAsIssuer = TestCertificateAuthority(
+            certificate: verifier.certificate,
+            privateKey: verifierPrivateKey,
+            issuer: X509HashTestData.rootCertificateAuthority
+        )
+        let impersonatingVerifier = X509HashTestData.createVerifierCredential(
+            organization: "Other Bank",
+            commonName: "Other Verifier",
+            issuer: verifierAsIssuer
+        )
+        walletConfig = makeWalletConfig(verifierTrustAnchors: [verifier.x5cEntry])
+
+        await assertRequestObjectRejectedAsUntrusted(
+            signedRequestObject(credential: impersonatingVerifier),
+            clientId: impersonatingVerifier.clientId
+        )
+    }
+
+    func testShouldRejectALeafCertificateIssuedByAConfiguredTrustAnchorWhoseKeyUsageDoesNotAllowKeyCertSign() async {
+        let digitalSignatureOnlyCertificateAuthority = X509HashTestData.createCertificateAuthority(
+            commonName: "Demo Digital Signature Only CA",
+            keyUsage: KeyUsage(digitalSignature: true)
+        )
+        let verifierFromCertificateAuthority =
+            X509HashTestData.createVerifierCredential(issuer: digitalSignatureOnlyCertificateAuthority)
+        walletConfig = makeWalletConfig(verifierTrustAnchors: [digitalSignatureOnlyCertificateAuthority.x5cEntry])
+
+        await assertRequestObjectRejectedAsUntrusted(
+            signedRequestObject(credential: verifierFromCertificateAuthority),
+            clientId: verifierFromCertificateAuthority.clientId
+        )
+    }
+
+    func testShouldAcceptALeafCertificateIssuedByAConfiguredTrustAnchorWithoutAKeyUsageExtension() async throws {
+        let certificateAuthorityWithoutKeyUsage = X509HashTestData.createCertificateAuthority(
+            commonName: "Demo Root CA Without Key Usage",
+            keyUsage: nil
+        )
+        let verifierFromCertificateAuthority =
+            X509HashTestData.createVerifierCredential(issuer: certificateAuthorityWithoutKeyUsage)
+        walletConfig = makeWalletConfig(verifierTrustAnchors: [certificateAuthorityWithoutKeyUsage.x5cEntry])
+
+        let authorizationRequest = try await createHandler(
+            requestByValue(signedRequestObject(credential: verifierFromCertificateAuthority), clientId: verifierFromCertificateAuthority.clientId)
+        ).handle()
+
+        XCTAssertEqual(verifierFromCertificateAuthority.clientId, authorizationRequest.clientId)
+    }
+
     func testShouldRejectASelfSignedLeafCertificateThatIsNotATrustAnchorAsUntrusted() async {
         let selfSignedVerifier = X509HashTestData.createSelfSignedVerifierCredential()
 
@@ -474,13 +537,9 @@ class X509HashPrefixAuthorizationRequestHandlerTests: XCTestCase {
     }
 
     func testShouldAcceptATrustAnchorWrappedOverSeveralLines() async throws {
-        let rootBase64 = X509HashTestData.rootCertificateAuthority.x5cEntry
-        let wrappedRootBase64 = stride(from: 0, to: rootBase64.count, by: 64).map { offset -> String in
-            let start = rootBase64.index(rootBase64.startIndex, offsetBy: offset)
-            let end = rootBase64.index(start, offsetBy: 64, limitedBy: rootBase64.endIndex) ?? rootBase64.endIndex
-            return String(rootBase64[start..<end])
-        }.joined(separator: "\n")
-        walletConfig = makeWalletConfig(verifierTrustAnchors: [wrappedRootBase64])
+        walletConfig = makeWalletConfig(
+            verifierTrustAnchors: [wrappedOverSeveralLines(X509HashTestData.rootCertificateAuthority.x5cEntry)]
+        )
 
         let authorizationRequest = try await createHandler(requestByValue()).handle()
 
@@ -498,6 +557,14 @@ class X509HashPrefixAuthorizationRequestHandlerTests: XCTestCase {
         }
         let expectedKey = try XCTUnwrap(P256.Signing.PublicKey(verifier.certificate.publicKey))
         XCTAssertEqual(expectedKey.x963Representation, SecKeyCopyExternalRepresentation(secKey, nil) as Data?)
+    }
+
+    private func wrappedOverSeveralLines(_ base64: String) -> String {
+        return stride(from: 0, to: base64.count, by: 64).map { offset -> String in
+            let start = base64.index(base64.startIndex, offsetBy: offset)
+            let end = base64.index(start, offsetBy: 64, limitedBy: base64.endIndex) ?? base64.endIndex
+            return String(base64[start..<end])
+        }.joined(separator: "\n")
     }
 
     private func makeWalletConfig(
@@ -660,7 +727,8 @@ enum X509HashTestData {
         organization: String = "Demo Trust Services",
         issuer: TestCertificateAuthority? = nil,
         notValidBefore: Date = Date() - X509HashTestData.dayInSeconds,
-        notValidAfter: Date = Date() + 3650 * X509HashTestData.dayInSeconds
+        notValidAfter: Date = Date() + 3650 * X509HashTestData.dayInSeconds,
+        keyUsage: KeyUsage? = KeyUsage(keyCertSign: true, cRLSign: true)
     ) -> TestCertificateAuthority {
         let privateKey = P256.Signing.PrivateKey()
         let subject = distinguishedName(organization: organization, commonName: commonName)
@@ -675,7 +743,9 @@ enum X509HashTestData {
             signatureAlgorithm: .ecdsaWithSHA256,
             extensions: try! Certificate.Extensions {
                 Critical(BasicConstraints.isCertificateAuthority(maxPathLength: nil))
-                Critical(KeyUsage(keyCertSign: true, cRLSign: true))
+                if let keyUsage = keyUsage {
+                    Critical(keyUsage)
+                }
             },
             issuerPrivateKey: .init(issuer?.privateKey ?? privateKey)
         )
