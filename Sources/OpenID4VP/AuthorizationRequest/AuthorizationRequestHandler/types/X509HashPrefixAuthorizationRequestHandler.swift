@@ -66,7 +66,7 @@ class X509HashPrefixAuthorizationRequestHandler: ClientIdPrefixBasedAuthorizatio
         let certificateChainBytes = try extractCertificateChainBytes(jwsHeader)
 
         guard Data(SHA256.hash(data: certificateChainBytes[0])).toBase64UrlEncoded() == certificateHash else {
-            throw invalidRequestObject("client_id does not match the SHA-256 hash of the leaf certificate in x5c")
+            throw invalidRequestObject("Certificate hash mismatch: the SHA-256 hash of the leaf certificate in x5c does not match the hash in the client_id")
         }
 
         let certificateChain = try certificateChainBytes.enumerated().map { (index, certificateBytes) -> Certificate in
