@@ -5,14 +5,12 @@ protocol AbstractMethodsForClientIdPrefixBasedAuthorizationRequestHandler {
     func getWalletMetadata(walletConfig: WalletConfig) throws -> [String: Any]
     func isSignedRequestSupported() -> Bool
     func isUnsignedRequestSupported() throws -> Bool
-    /// Resolves the public key that verifies the signed Authorization Request from its JWS header.
     func extractPublicKey(algorithm: String, jwsHeader: [String: Any]) async throws -> PublicKeyType
     func clientIdPrefix() -> String
     func confirmSpecVersionIdentifiedFromRequest() -> Bool
     /// Validates the authenticity of the client identifier.
     /// For example, ensures that a client claiming to use a specific prefix is actually authorized or trusted.
     func validateClientAuthenticity() throws
-    /// Signature algorithms this prefix verifies signed Authorization Requests with.
     func supportedSignatureAlgorithms() -> [SignatureAlgorithm]
 }
 
@@ -315,9 +313,8 @@ class ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass  {
     private func isClientIdPrefixSupported(walletConfig: WalletConfig) throws {
         let clientIdPrefix = delegate.clientIdPrefix()
         var walletSupportedClientIdPrefixes = walletConfig.clientIdPrefixesSupported.compactMap { $0.rawValue }
-        if walletSupportedClientIdPrefixes.contains(ClientIdPrefix.decentralizedIdentifier.rawValue),
-           let didClientIdScheme = ClientIdPrefix.toClientIdScheme(.decentralizedIdentifier) {
-            walletSupportedClientIdPrefixes.append(didClientIdScheme)
+        if walletSupportedClientIdPrefixes.contains(ClientIdPrefix.decentralizedIdentifier.rawValue) {
+            try walletSupportedClientIdPrefixes.append(ClientIdPrefix.toClientIdScheme(.decentralizedIdentifier))
         }
         if !walletSupportedClientIdPrefixes.contains(clientIdPrefix) {
             throw InvalidData(

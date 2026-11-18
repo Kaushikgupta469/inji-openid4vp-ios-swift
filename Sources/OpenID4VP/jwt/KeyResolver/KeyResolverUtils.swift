@@ -154,7 +154,6 @@ func publicKeyFromPEM(_ pem: String) throws -> PublicKeyType {
     return try toEd25519Key(publicKeyData: publicKeyBytes)
 }
 
-// Creates an EC P-256 public SecKey from its uncompressed (X9.63) representation
 func createSecKey(from publicKeyData: Data) -> SecKey? {
     let attributes: [String: Any] = [
         kSecAttrKeyType as String: kSecAttrKeyTypeECSECPrimeRandom,

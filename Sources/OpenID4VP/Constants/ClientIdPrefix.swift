@@ -10,7 +10,7 @@ public enum ClientIdPrefix: String, Codable, CaseIterable {
         return ClientIdPrefix(rawValue: value)
     }
 
-    static func toClientIdScheme(_ clientIdPrefix: ClientIdPrefix) -> String? {
+    static func toClientIdScheme(_ clientIdPrefix: ClientIdPrefix) throws -> String {
         switch clientIdPrefix {
         case .preRegistered:
             return ClientIdScheme.preRegistered.rawValue
@@ -19,7 +19,10 @@ public enum ClientIdPrefix: String, Codable, CaseIterable {
         case .decentralizedIdentifier:
             return ClientIdScheme.did.rawValue
         case .x509Hash:
-            return nil
+            throw InvalidData(
+                message: "client_id_scheme is not supported for client_id_prefix \(ClientIdPrefix.x509Hash.rawValue)",
+                className: String(describing: ClientIdPrefix.self)
+            )
         }
     }
 }

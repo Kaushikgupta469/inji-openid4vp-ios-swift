@@ -542,6 +542,15 @@ final class WalletConfigTests: XCTestCase {
         XCTAssertEqual(schemes, ["pre-registered"])
     }
 
+    func testToClientIdSchemeRejectsX509HashAsUnsupported() throws {
+        XCTAssertEqual(try ClientIdPrefix.toClientIdScheme(.preRegistered), "pre-registered")
+        XCTAssertEqual(try ClientIdPrefix.toClientIdScheme(.redirectUri), "redirect_uri")
+        XCTAssertEqual(try ClientIdPrefix.toClientIdScheme(.decentralizedIdentifier), "did")
+        XCTAssertThrowsError(try ClientIdPrefix.toClientIdScheme(.x509Hash)) { error in
+            XCTAssertTrue(error is InvalidData)
+        }
+    }
+
     func testToWalletMetadataV1ListsX509Hash() throws {
         let metadata = try makeConfig(clientIdPrefixes: [.decentralizedIdentifier, .x509Hash]).toWalletMetadata(specVersion: .v1)
         let prefixes = try XCTUnwrap(metadata[WalletMetadataConstants.clientIdPrefixesSupported] as? [String])

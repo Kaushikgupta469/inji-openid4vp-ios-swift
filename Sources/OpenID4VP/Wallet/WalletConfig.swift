@@ -122,7 +122,9 @@ public struct WalletConfig: Codable {
                 }
                 walletMetadata[WalletMetadataConstants.presentationDefinitionUriSupported] = isPresentationDefinitionUriSupported
                 walletMetadata[MetadataConstants.vpFormatsSupported] = vpFormats
-                walletMetadata[WalletMetadataConstants.clientIdSchemesSupported] = clientIdPrefixesSupported.compactMap { ClientIdPrefix.toClientIdScheme($0) }
+                walletMetadata[WalletMetadataConstants.clientIdSchemesSupported] = try clientIdPrefixesSupported
+                    .filter { $0 != .x509Hash }
+                    .map { try ClientIdPrefix.toClientIdScheme($0) }
                 if let requestObjectSigningAlgValuesSupported = requestObjectSigningAlgValuesSupported {
                     walletMetadata[WalletMetadataConstants.requestObjectSigningAlgValuesSupported] = requestObjectSigningAlgValuesSupported.map { $0.rawValue }
                 }

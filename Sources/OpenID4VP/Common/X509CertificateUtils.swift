@@ -3,12 +3,10 @@ import Security
 import SwiftASN1
 import X509
 
-/// Exactly one DER-encoded certificate; swift-asn1 rejects trailing data.
 func parseX509Certificate(_ der: Data) throws -> Certificate {
     return try Certificate(derEncoded: Array(der))
 }
 
-/// Standard base64, skipping whitespace; isWhitespace also covers "\r\n", a single Character in Swift.
 func decodeBase64IgnoringWhitespace(_ base64: String) -> Data? {
     return Data(base64Encoded: base64.filter { !$0.isWhitespace })
 }
@@ -40,7 +38,6 @@ func validateCertificationPath(_ certificateChain: [Data], trustAnchors: [SecCer
             reason: (error as Error?)?.localizedDescription ?? "The certificate chain is not trusted"
         )
     }
-    // The trust anchor must be a CA that is allowed to sign certificates
     if let trustAnchor = evaluatedCertificateChain(of: trust).last,
        SecCertificateCopyData(trustAnchor) as Data != certificateChain[0] {
         try validateTrustAnchorCanSignCertificates(trustAnchor)

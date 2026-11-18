@@ -5,7 +5,6 @@ import X509
 
 private let x5cHeaderParameter = "x5c"
 
-// \z because $ also matches before a trailing newline
 private let certificateHashPattern = "^[A-Za-z0-9_-]{43}\\z"
 
 class X509HashPrefixAuthorizationRequestHandler: ClientIdPrefixBasedAuthorizationRequestHandler {
@@ -112,7 +111,6 @@ class X509HashPrefixAuthorizationRequestHandler: ClientIdPrefixBasedAuthorizatio
         guard let certificateChain = jwsHeader[x5cHeaderParameter] as? [Any], !certificateChain.isEmpty else {
             throw invalidRequestObject("x5c certificate chain is missing in the JWS header")
         }
-        // x5c entries are standard base64, not base64url
         return try certificateChain.enumerated().map { (index, certificate) -> Data in
             guard let certificate = certificate as? String, !certificate.isEmpty,
                   let certificateBytes = Data(base64Encoded: certificate) else {
