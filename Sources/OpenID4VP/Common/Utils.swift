@@ -10,6 +10,7 @@ private let COSE_ALG_EDDSA: Int = -8
 // COSE curve identifiers (RFC 8152 / COSE Keys)
 private let COSE_CRV_P256: Int = 1
 private let COSE_CRV_ED25519: Int = 6
+private let COSE_CRV_ED448: Int = 7
 
 // CBOR tag identifiers (RFC 7049 / CBOR Tags)
 private let CBOR_TAG_ENCODED_CBOR: Int = 24
@@ -203,8 +204,15 @@ func resolveMdocKeyAndAlg(_ mdocCredential: String) throws -> (keyRef: String, a
     }
     
     
-    guard case let CBOR.map(msoMap)? = decoded,
-          let deviceKeyInfo = msoMap[CBOR.utf8String("deviceKeyInfo")],
+    guard case let CBOR.map(msoMap)? = decoded else {
+        throw InvalidData(message: "deviceKey missing", className: "OpenID4VPUtils")
+    }
+    return try extractKeyReferenceAndAlg(fromMso: msoMap)
+}
+
+/// The holder key reference (base64url COSE_Key) and the signing algorithm of an MSO's deviceKey.
+func extractKeyReferenceAndAlg(fromMso msoMap: [CBOR: CBOR]) throws -> (keyRef: String, alg: String) {
+    guard let deviceKeyInfo = msoMap[CBOR.utf8String("deviceKeyInfo")],
           case let CBOR.map(deviceKeyInfoMap) = deviceKeyInfo,
           let deviceKey = deviceKeyInfoMap[CBOR.utf8String("deviceKey")],
           case let CBOR.map(deviceKeyMap) = deviceKey else {
@@ -240,10 +248,35 @@ func resolveMdocKeyAndAlg(_ mdocCredential: String) throws -> (keyRef: String, a
     }
 }
 
+// raw r ‖ s on P-256; Ed448 signatures are longer than Ed25519 ones
+func rawSignatureLength(algorithm: String, mso: [CBOR: CBOR]) -> Int? {
+    switch (algorithm, deviceKeyCurve(fromMso: mso)) {
+    case ("ES256", _): return 64
+    case ("EdDSA", COSE_CRV_ED25519): return 64
+    case ("EdDSA", COSE_CRV_ED448): return 114
+    default: return nil
+    }
+}
+
+func deviceKeyCurve(fromMso mso: [CBOR: CBOR]) -> Int? {
+    guard case let .map(deviceKeyInfo)? = mso[.utf8String("deviceKeyInfo")],
+          case let .map(deviceKey)? = deviceKeyInfo[.utf8String("deviceKey")],
+          let curve = deviceKey[.negativeInt(0)] else { return nil }
+    return try? readCoseInt(curve)
+}
+
+private func coseIntegerTooLarge() -> InvalidData {
+    InvalidData(message: "COSE integer does not fit in Int", className: "OpenID4VPUtils")
+}
+
 func readCoseInt(_ cbor: CBOR) throws -> Int {
     switch cbor {
-    case .unsignedInt(let v): return Int(v)
-    case .negativeInt(let v): return -1 - Int(v)
+    case .unsignedInt(let v):
+        guard let value = Int(exactly: v) else { throw coseIntegerTooLarge() }
+        return value
+    case .negativeInt(let v):
+        guard let magnitude = Int(exactly: v) else { throw coseIntegerTooLarge() }
+        return -1 - magnitude
     default:
         throw InvalidData(message: "Invalid COSE integer type", className: "OpenID4VPUtils")
     }
