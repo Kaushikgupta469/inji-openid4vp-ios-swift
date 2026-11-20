@@ -59,10 +59,16 @@ class RedirectUriPrefixAuthorizationRequestHandler:  ClientIdPrefixBasedAuthoriz
     }
 
     private func validateResponseUriMatchesClientId(authorizationRequestParameters: [String: Any]) throws {
+        let clientIdValue = extractClientIdPartOnly(authorizationRequestParameters[AuthorizationRequestFieldConstants.clientId] as? String ?? "")
+
+        if authorizationRequestParameters[AuthorizationRequestFieldConstants.responseUri] == nil {
+            self.authorizationRequestParameters[AuthorizationRequestFieldConstants.responseUri] = clientIdValue
+            return
+        }
+
         try validateAttribute(AuthorizationRequestFieldConstants.responseUri, values: self.authorizationRequestParameters)
 
         let responseUriValue = authorizationRequestParameters[AuthorizationRequestFieldConstants.responseUri]
-        let clientIdValue = extractClientIdPartOnly(authorizationRequestParameters[AuthorizationRequestFieldConstants.clientId] as? String ?? "")
 
         if responseUriValue as? String != clientIdValue {
             throw InvalidData(
