@@ -1,4 +1,7 @@
 import Foundation
+
+private let kidHeaderParameter = "kid"
+
 class DecentralizedIdentifierPrefixAuthorizationRequestHandler:  ClientIdPrefixBasedAuthorizationRequestHandler {
     override init(clientId: String,
                   specVersion: SpecVersion,
@@ -39,7 +42,7 @@ class DecentralizedIdentifierPrefixAuthorizationRequestHandler:  ClientIdPrefixB
     }
     
     func extractPublicKey(algorithm: String, jwsHeader: [String: Any]) async throws -> PublicKeyType {
-        guard let keyId = jwsHeader["kid"] as? String else {
+        guard let keyId = jwsHeader[kidHeaderParameter] as? String else {
             throw InvalidData(message: "keyId is required to extract public key in \(clientIdPrefix()) client_id_prefix",
                               className: className,
                               code: OpenID4VPErrorCodes.invalidRequestObject)

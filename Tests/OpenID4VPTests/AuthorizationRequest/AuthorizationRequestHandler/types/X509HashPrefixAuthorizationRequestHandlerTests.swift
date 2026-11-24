@@ -528,14 +528,6 @@ class X509HashPrefixAuthorizationRequestHandlerTests: XCTestCase {
         XCTAssertEqual(["ES256", "EdDSA"], walletMetadata["request_object_signing_alg_values_supported"] as? [String])
     }
 
-    func testGetWalletMetadataShouldListOnlyTheAlgorithmsX509HashVerifies() throws {
-        walletConfig = makeWalletConfig(requestObjectSigningAlgValuesSupported: [.edDsa, .es256, .rs256, .es256k1])
-
-        let walletMetadata = try createHandler(requestByValue()).getWalletMetadata(walletConfig: walletConfig)
-
-        XCTAssertEqual(["EdDSA", "ES256"], walletMetadata["request_object_signing_alg_values_supported"] as? [String])
-    }
-
     func testShouldAcceptATrustAnchorWrappedOverSeveralLines() async throws {
         walletConfig = makeWalletConfig(
             verifierTrustAnchors: [wrappedOverSeveralLines(X509HashTestData.rootCertificateAuthority.x5cEntry)]

@@ -577,14 +577,6 @@ final class WalletConfigTests: XCTestCase {
         XCTAssertEqual(decoded.verifierTrustAnchors, [])
     }
 
-    func testLimitingRequestObjectSigningAlgValuesSupportedKeepsOnlyTheGivenAlgorithms() {
-        let config = WalletConfig(requestObjectSigningAlgValuesSupported: [.edDsa, .es256])
-
-        let limitedConfig = config.limitingRequestObjectSigningAlgValuesSupported(to: [.edDsa])
-
-        XCTAssertEqual(limitedConfig.requestObjectSigningAlgValuesSupported, [.edDsa])
-    }
-
     func testToWalletMetadataDraft23VpFormatsUsesAlgValuesSupported() throws {
         let metadata = try makeConfig(vpFormats: [.ldp_vc: ldpVc]).toWalletMetadata(specVersion: .draft23)
         let vpFormats = try XCTUnwrap(metadata[MetadataConstants.vpFormatsSupported] as? [String: Any])

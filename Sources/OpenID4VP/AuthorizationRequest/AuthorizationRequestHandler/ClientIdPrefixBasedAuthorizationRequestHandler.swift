@@ -11,19 +11,14 @@ protocol AbstractMethodsForClientIdPrefixBasedAuthorizationRequestHandler {
     /// Validates the authenticity of the client identifier.
     /// For example, ensures that a client claiming to use a specific prefix is actually authorized or trusted.
     func validateClientAuthenticity() throws
-    func supportedSignatureAlgorithms() -> [SignatureAlgorithm]
 }
 
 extension AbstractMethodsForClientIdPrefixBasedAuthorizationRequestHandler {
     func confirmSpecVersionIdentifiedFromRequest() -> Bool {
         return true
     }
-
+    
     func validateClientAuthenticity() throws {}
-
-    func supportedSignatureAlgorithms() -> [SignatureAlgorithm] {
-        return [.edDsa, .es256]
-    }
 }
 
 class ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass  {
@@ -41,10 +36,6 @@ class ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass  {
     var className = String(describing: ClientIdPrefixBasedAuthorizationRequestHandler.self)
     
     let errorMessageForMismatchedAcceptableType: String = "does not match any acceptable types"
-
-    private var prefixWalletConfig: WalletConfig {
-        return walletConfig.limitingRequestObjectSigningAlgValuesSupported(to: delegate.supportedSignatureAlgorithms())
-    }
     
     init(clientId: String,
          specVersion: SpecVersion,
@@ -196,7 +187,7 @@ class ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass  {
             try isClientIdPrefixSupported(walletConfig: walletConfig)
             
             do {
-                let processedWalletMetadata = try delegate.getWalletMetadata(walletConfig: prefixWalletConfig)
+                let processedWalletMetadata = try delegate.getWalletMetadata(walletConfig: walletConfig)
                 let jsonData = try JSONSerialization.data(withJSONObject: processedWalletMetadata)
                 let jsonStringifiedWalletMetadata = String(data: jsonData, encoding: .utf8) ?? ""
                 
@@ -330,13 +321,6 @@ class ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass  {
             throw InvalidData(
                 message: "request_object_signing_alg is not supported by wallet",
                 className: className
-            )
-        }
-        guard delegate.supportedSignatureAlgorithms().contains(where: { $0.rawValue == algorithm }) else {
-            throw InvalidData(
-                message: "Signing algorithm '\(algorithm)' is not supported",
-                className: className,
-                code: OpenID4VPErrorCodes.invalidRequestObject
             )
         }
     }

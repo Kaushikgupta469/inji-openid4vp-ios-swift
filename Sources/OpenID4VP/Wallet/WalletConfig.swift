@@ -176,21 +176,6 @@ public struct WalletConfig: Codable {
         try container.encode(validateTrustedVerifier, forKey: .validateTrustedVerifier)
         try container.encode(verifierTrustAnchors, forKey: .verifierTrustAnchors)
     }
-
-    func limitingRequestObjectSigningAlgValuesSupported(to signatureAlgorithms: [SignatureAlgorithm]) -> WalletConfig {
-        return WalletConfig(
-            vpFormatsSupported: vpFormatsSupported,
-            clientIdPrefixesSupported: clientIdPrefixesSupported,
-            requestObjectSigningAlgValuesSupported: requestObjectSigningAlgValuesSupported?.filter { signatureAlgorithms.contains($0) },
-            authorizationEncryptionAlgValuesSupported: authorizationEncryptionAlgValuesSupported,
-            authorizationEncryptionEncValuesSupported: authorizationEncryptionEncValuesSupported,
-            responseTypesSupported: responseTypesSupported,
-            isPresentationDefinitionUriSupported: isPresentationDefinitionUriSupported,
-            trustedVerifiers: trustedVerifiers,
-            validateTrustedVerifier: validateTrustedVerifier,
-            verifierTrustAnchors: verifierTrustAnchors
-        )
-    }
 }
 
 @usableFromInline

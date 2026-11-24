@@ -7,7 +7,6 @@ class MockClientIdPrefixAuthRequestHandler: ClientIdPrefixBasedAuthorizationRequ
     private let isSignedRequestSupportedFlag: Bool
     private let isUnsignedRequestSupportedFlag: Bool
     private let clientIdPrefixValue: String
-    private let supportedSignatureAlgorithmsValue: [SignatureAlgorithm]
     private var extractPublicKeyError: OpenID4VPException?
     private var errorToBeThrown: OpenID4VPException?
     var specVersionAndVPRequestMatch: Bool = true
@@ -20,9 +19,7 @@ class MockClientIdPrefixAuthRequestHandler: ClientIdPrefixBasedAuthorizationRequ
          specVersion: SpecVersion = .v1,
          walletConfig: WalletConfig = WalletConfig(),
          isSignedRequestSupported: Bool = true,
-         isUnsignedRequestSupported: Bool = true,
-         supportedSignatureAlgorithms: [SignatureAlgorithm] = [.edDsa, .es256]) {
-        self.supportedSignatureAlgorithmsValue = supportedSignatureAlgorithms
+         isUnsignedRequestSupported: Bool = true) {
         self.isSignedRequestSupportedFlag = isSignedRequestSupported
         self.isUnsignedRequestSupportedFlag = isUnsignedRequestSupported
         do {
@@ -44,10 +41,6 @@ class MockClientIdPrefixAuthRequestHandler: ClientIdPrefixBasedAuthorizationRequ
     
     func clientIdPrefix() -> String {
         return clientIdPrefixValue
-    }
-
-    func supportedSignatureAlgorithms() -> [SignatureAlgorithm] {
-        return supportedSignatureAlgorithmsValue
     }
     
     func setExtractPublicKeyError(error: OpenID4VPException){

@@ -85,18 +85,7 @@ class X509HashPrefixAuthorizationRequestHandler: ClientIdPrefixBasedAuthorizatio
 
     func getWalletMetadata(walletConfig: WalletConfig) throws -> [String: Any] {
         try validateRequestObjectSigningAlgSupported(walletConfig, className: className)
-        let signingAlgorithms = (walletConfig.requestObjectSigningAlgValuesSupported ?? [])
-            .filter { supportedSignatureAlgorithms().contains($0) }
-            .map { $0.rawValue }
-        guard !signingAlgorithms.isEmpty else {
-            throw InvalidData(
-                message: "request_object_signing_alg_values_supported is not present in wallet metadata.",
-                className: className
-            )
-        }
-        var walletMetadata = try walletConfig.toWalletMetadata(specVersion: specVersion)
-        walletMetadata[WalletMetadataConstants.requestObjectSigningAlgValuesSupported] = signingAlgorithms
-        return walletMetadata
+        return try walletConfig.toWalletMetadata(specVersion: specVersion)
     }
 
     private func validateCertificateChain(algorithm: String, leafCertificate: Certificate, certificateChainBytes: [Data]) throws -> PublicKeyType {
