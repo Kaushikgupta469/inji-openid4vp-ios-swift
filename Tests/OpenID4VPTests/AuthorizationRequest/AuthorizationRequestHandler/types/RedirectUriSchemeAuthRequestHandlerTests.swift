@@ -327,7 +327,7 @@ class RedirectUriSchemeAuthRequestHandlerTests : XCTestCase {
     }
 
     
-    func testValidateClientAuthenticity_responseUriValidationModes_responseUriMissing_throwsMissingField() {
+    func testValidateClientAuthenticity_responseUriValidationModes_responseUriMissing_usesClientIdAsResponseUri() {
         let responseUriValidationModes = ["direct_post", "direct_post.jwt"]
         for responseMode in responseUriValidationModes {
             let authorizationRequestParameters: [String: Any] = [
@@ -343,13 +343,67 @@ class RedirectUriSchemeAuthRequestHandlerTests : XCTestCase {
                 walletNonce: "mock-nonce",
                 networkManager: mockNetworkManager
             )
-            XCTAssertThrowsError(try handler.validateClientAuthenticity(), "responseMode: \(responseMode)") { error in
-                assertOpenID4VPException(
-                    error,
-                    expectedMessage: "Missing Input: response_uri param is required",
-                    expectedCode: OpenID4VPErrorCodes.invalidRequest
-                )
-            }
+            XCTAssertNoThrow(try handler.validateClientAuthenticity(), "responseMode: \(responseMode)")
+            XCTAssertEqual(
+                handler.authorizationRequestParameters[AuthorizationRequestFieldConstants.responseUri] as? String,
+                "https://mock-verifier.com",
+                "responseMode: \(responseMode)"
+            )
+        }
+    }
+
+    func testAuthorizationRequestCarriesClientIdAsResponseUriWhenResponseUriIsMissing() async throws {
+        let authorizationRequestParameters: [String : Any] = createAuthorizationRequest(paramList: authRequestWithRedirectUriByValue.filter { $0 != AuthorizationRequestFieldConstants.responseUri }, requestParams: mergeMaps(authorizationRequestParamsWithValue, redirectUriSchemeClientIdParameter), addEncryptionClientMetadataParams: false) as [String : Any]
+        let handler = RedirectUriPrefixAuthorizationRequestHandler(clientId: clientId, specVersion: .v1, authorizationRequestParameters: authorizationRequestParameters, walletConfig: walletConfig, setResponseDispatchInfo: mockSetResponseDispatchInfo, walletNonce: "mock-nonce", networkManager: mockNetworkManager)
+
+        try handler.validateClientAuthenticity()
+        try handler.prepareDispatchInfo()
+        try await handler.validateAndParseRequestFields()
+
+        XCTAssertEqual(handler.createAuthorizationRequest().responseUri, "https://mock-verifier.com")
+    }
+
+    func testValidateClientAuthenticity_responseUriEmpty_throwsInvalidInput() {
+        let authorizationRequestParameters: [String: Any] = [
+            AuthorizationRequestFieldConstants.clientId: "redirect_uri:https://mock-verifier.com",
+            AuthorizationRequestFieldConstants.responseUri: "",
+            AuthorizationRequestFieldConstants.responseMode: "direct_post"
+        ]
+        let handler = RedirectUriPrefixAuthorizationRequestHandler(
+            clientId: clientId,
+            specVersion: .v1,
+            authorizationRequestParameters: authorizationRequestParameters,
+            walletConfig: walletConfig,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
+            walletNonce: "mock-nonce",
+            networkManager: mockNetworkManager
+        )
+        XCTAssertThrowsError(try handler.validateClientAuthenticity()) { error in
+            XCTAssertTrue(error is InvalidInput, "Expected InvalidInput but got \(type(of: error))")
+        }
+    }
+
+    func testValidateClientAuthenticity_responseUriNotMatchingClientId_throwsInvalidData() {
+        let authorizationRequestParameters: [String: Any] = [
+            AuthorizationRequestFieldConstants.clientId: "redirect_uri:https://mock-verifier.com",
+            AuthorizationRequestFieldConstants.responseUri: "https://different-uri.com",
+            AuthorizationRequestFieldConstants.responseMode: "direct_post"
+        ]
+        let handler = RedirectUriPrefixAuthorizationRequestHandler(
+            clientId: clientId,
+            specVersion: .v1,
+            authorizationRequestParameters: authorizationRequestParameters,
+            walletConfig: walletConfig,
+            setResponseDispatchInfo: mockSetResponseDispatchInfo,
+            walletNonce: "mock-nonce",
+            networkManager: mockNetworkManager
+        )
+        XCTAssertThrowsError(try handler.validateClientAuthenticity()) { error in
+            assertOpenID4VPException(
+                error,
+                expectedMessage: "response_uri should be equal to client_id for given client_id_prefix",
+                expectedCode: OpenID4VPErrorCodes.invalidRequest
+            )
         }
     }
 

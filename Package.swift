@@ -39,7 +39,8 @@ let package = Package(
                 .product(name: "MultiformatsKit", package: "multiformatskit"),
                 .product(name: "X509", package: "swift-certificates"),
                 .product(name: "SwiftASN1", package: "swift-asn1")
-            ]
+            ],
+            resources: [.copy("Resources/mdoc")]
         )
     ]
 )
