@@ -25,8 +25,8 @@ public struct JWEHandler {
             var header = DefaultJWEHeaderImpl()
             header.keyManagementAlgorithm = .ecdhES
             header.encodingAlgorithm = .a256GCM
-            header.agreementPartyUInfo = Data(base64UrlEncoded: producerInfo)
-            header.agreementPartyVInfo = Data(base64UrlEncoded: recipientInfo)
+            header.agreementPartyUInfo = Data(producerInfo.utf8)
+            header.agreementPartyVInfo = Data(recipientInfo.utf8)
             header.keyID = recipientKey.keyID
             
             let payloadData: Data = payload
