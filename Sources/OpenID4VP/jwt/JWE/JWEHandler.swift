@@ -25,8 +25,14 @@ public struct JWEHandler {
             var header = DefaultJWEHeaderImpl()
             header.keyManagementAlgorithm = .ecdhES
             header.encodingAlgorithm = .a256GCM
-            header.agreementPartyUInfo = Data(producerInfo.utf8)
-            header.agreementPartyVInfo = Data(recipientInfo.utf8)
+            let apu = Data(producerInfo.utf8).toBase64UrlEncoded()
+            let apv = Data(recipientInfo.utf8).toBase64UrlEncoded()
+            guard let apuBytes = Data(base64UrlEncoded: apu),
+                  let apvBytes = Data(base64UrlEncoded: apv) else {
+                throw JweEncryptionFailure(message: "Invalid apu/apv encoding", className: Self.className)
+            }
+            header.agreementPartyUInfo = apuBytes
+            header.agreementPartyVInfo = apvBytes
             header.keyID = recipientKey.keyID
             
             let payloadData: Data = payload
