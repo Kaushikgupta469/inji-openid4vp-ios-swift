@@ -6,8 +6,8 @@ final class JWEHandlerTests: XCTestCase {
 
     let jweKeyEncryptionAlgorithm = "ECDH-ES"
     let jweContentEncryptionAlgorithm = "A256GCM"
-    let producerInfo = "bW9jaw"          // base64url("mock")
-    let recipientInfo = "dmVyaWZpZXI"   // base64url("verifier")
+    let producerInfo = "k5qdSnwnowi-U_iRi0cZuQ"
+    let recipientInfo = "abc.DEF_123-xyz~"
 
     let verificationPublicKey = createInstance([
         "kty": "OKP",
@@ -64,14 +64,18 @@ final class JWEHandlerTests: XCTestCase {
         let response = try makeHandler().encrypt(toData(["key": "value"]))
 
         let header = try decodeHeader(response)
-        XCTAssertEqual(header["apu"] as? String, producerInfo)
+        let apu = try XCTUnwrap(header["apu"] as? String)
+        let decodedApu = try XCTUnwrap(Data(base64Encoded: apu.base64URLToBase64()))
+        XCTAssertEqual(String(data: decodedApu, encoding: .utf8), producerInfo)
     }
 
     func testJWEHeaderContainsApvMatchingRecipientInfo() throws {
         let response = try makeHandler().encrypt(toData(["key": "value"]))
 
         let header = try decodeHeader(response)
-        XCTAssertEqual(header["apv"] as? String, recipientInfo)
+        let apv = try XCTUnwrap(header["apv"] as? String)
+        let decodedApv = try XCTUnwrap(Data(base64Encoded: apv.base64URLToBase64()))
+        XCTAssertEqual(String(data: decodedApv, encoding: .utf8), recipientInfo)
     }
 
     func testJWEHeaderContainsEpkWithExpectedFields() throws {
