@@ -47,7 +47,7 @@ class MockClientIdPrefixAuthRequestHandler: ClientIdPrefixBasedAuthorizationRequ
         self.extractPublicKeyError = error
     }
     
-    func extractPublicKey(keyId: String?, algorithm: String) async throws -> PublicKeyType {
+    func extractPublicKey(algorithm: String, jwsHeader: [String: Any]) async throws -> PublicKeyType {
         if(errorToBeThrown != nil) {
             throw errorToBeThrown!
         }

@@ -154,7 +154,7 @@ func publicKeyFromPEM(_ pem: String) throws -> PublicKeyType {
     return try toEd25519Key(publicKeyData: publicKeyBytes)
 }
 
-private func createSecKey(from publicKeyData: Data) -> SecKey? {
+func createSecKey(from publicKeyData: Data) -> SecKey? {
     let attributes: [String: Any] = [
         kSecAttrKeyType as String: kSecAttrKeyTypeECSECPrimeRandom,
         kSecAttrKeyClass as String: kSecAttrKeyClassPublic,

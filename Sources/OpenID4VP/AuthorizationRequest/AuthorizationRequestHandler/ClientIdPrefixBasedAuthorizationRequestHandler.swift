@@ -5,7 +5,7 @@ protocol AbstractMethodsForClientIdPrefixBasedAuthorizationRequestHandler {
     func getWalletMetadata(walletConfig: WalletConfig) throws -> [String: Any]
     func isSignedRequestSupported() -> Bool
     func isUnsignedRequestSupported() throws -> Bool
-    func extractPublicKey(keyId: String?, algorithm: String) async throws -> PublicKeyType
+    func extractPublicKey(algorithm: String, jwsHeader: [String: Any]) async throws -> PublicKeyType
     func clientIdPrefix() -> String
     func confirmSpecVersionIdentifiedFromRequest() -> Bool
     /// Validates the authenticity of the client identifier.
@@ -272,10 +272,10 @@ class ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass  {
             
             try validateAuthorizationRequestSigningAlgorithm(algorithm)
             
-            let publicKey = try await delegate.extractPublicKey(keyId: header["kid"] as? String, algorithm: algorithm)
+            let publicKey = try await delegate.extractPublicKey(algorithm: algorithm, jwsHeader: header)
             try await JWSHandler.verify(jws: jwtRequest , publicKey: publicKey)
         } catch {
-            throw InvalidData(message: "Request URI response validation failed - \(error.localizedDescription)", className: className, code: OpenID4VPErrorCodes.invalidRequestObject)
+            throw InvalidData(message: "Request URI response validation failed - \(error.localizedDescription)", className: className, code: OpenID4VPErrorCodes.invalidRequestObject, notifyVerifier: (error as? OpenID4VPException)?.notifyVerifier ?? true)
         }
     }
     
@@ -305,7 +305,7 @@ class ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass  {
         let clientIdPrefix = delegate.clientIdPrefix()
         var walletSupportedClientIdPrefixes = walletConfig.clientIdPrefixesSupported.compactMap { $0.rawValue }
         if walletSupportedClientIdPrefixes.contains(ClientIdPrefix.decentralizedIdentifier.rawValue) {
-            walletSupportedClientIdPrefixes.append(ClientIdPrefix.toClientIdScheme(.decentralizedIdentifier))
+            try walletSupportedClientIdPrefixes.append(ClientIdPrefix.toClientIdScheme(.decentralizedIdentifier))
         }
         if !walletSupportedClientIdPrefixes.contains(clientIdPrefix) {
             throw InvalidData(
@@ -316,14 +316,12 @@ class ClientIdPrefixBasedAuthorizationRequestHandlerBaseClass  {
     }
     
     private func validateAuthorizationRequestSigningAlgorithm(_ algorithm: String) throws {
-        if shouldValidateWithWalletMetadata {
-            let supportedAlgs = walletConfig.requestObjectSigningAlgValuesSupported?.compactMap({$0.rawValue}) ?? []
-            if !supportedAlgs.contains(algorithm) {
-                throw InvalidData(
-                    message: "request_object_signing_alg is not supported by wallet",
-                    className: className
-                )
-            }
+        let supportedAlgs = walletConfig.requestObjectSigningAlgValuesSupported?.compactMap({$0.rawValue}) ?? []
+        if !supportedAlgs.contains(algorithm) {
+            throw InvalidData(
+                message: "request_object_signing_alg is not supported by wallet",
+                className: className
+            )
         }
     }
     

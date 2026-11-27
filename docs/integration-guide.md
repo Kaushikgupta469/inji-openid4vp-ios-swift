@@ -218,14 +218,15 @@ let openID4VP = OpenID4VP(
 | Parameter                                   | Type                     | Default                                                    | Purpose                                                       |
 |---------------------------------------------|--------------------------|------------------------------------------------------------|---------------------------------------------------------------|
 | `vpFormatsSupported`                        | `[VPFormatType]`         | `[ldp_vc, mso_mdoc, dc_sd_jwt]`                            | Verifiable Presentation formats your wallet supports          |
-| `clientIdPrefixesSupported`                 | `[ClientIdPrefix]`       | `[.preRegistered, .redirectUri, .decentralizedIdentifier]` | Client ID prefix types your wallet can authenticate           |
-| `requestObjectSigningAlgValuesSupported`    | `[SignatureAlgorithm]?`  | `[.edDsa]`                                                 | Signature algorithms accepted when validating signed requests |
+| `clientIdPrefixesSupported`                 | `[ClientIdPrefix]`       | `[.preRegistered, .redirectUri, .decentralizedIdentifier]` | Client ID prefix types your wallet can authenticate (`.preRegistered`, `.redirectUri`, `.decentralizedIdentifier`, `.x509Hash`) |
+| `requestObjectSigningAlgValuesSupported`    | `[SignatureAlgorithm]?`  | `[.edDsa]`                                                 | Signature algorithms accepted when validating signed requests. Supported values are `.edDsa` (Ed25519 keys) and `.es256` (P-256 keys) |
 | `authorizationEncryptionAlgValuesSupported` | `[EncryptionAlgorithm]?` | `[.ecdhES]`                                                | Supported key management algorithms for encryption            |
 | `authorizationEncryptionEncValuesSupported` | `[EncryptionMethod]?`    | `[.a256GCM]`                                               | Supported content encryption methods                          |
 | `responseTypesSupported`                    | `[ResponseType]`         | `[.vp_token]`                                              | OpenID4VP response types your wallet can generate             |
 | `isPresentationDefinitionUriSupported`      | `Bool`                   | `true`                                                     | Whether wallet can resolve presentation definitions from URIs |
 | `trustedVerifiers`                          | `[Verifier]`             | `[]`                                                       | Pre-configured trusted verifiers                              |
 | `validateTrustedVerifier`                   | `Bool`                   | `true`                                                     | Whether to validate pre-registered verifiers                  |
+| `verifierTrustAnchors`                      | `[String]`               | `[]`                                                       | CA certificates, each the standard base64 DER encoding used in `x5c`, that the certificate chain of an `x509_hash` Verifier must validate to. With none configured, `x509_hash` requests are rejected |
 
 ### Configuring Trusted Verifiers
 
@@ -350,6 +351,7 @@ This method:
 **Client validation:**
 - For `pre-registered` clients: validates against `WalletConfig.trustedVerifiers`
 - Can be disabled by setting `WalletConfig.validateTrustedVerifier` to `false` in wallet config
+- For `x509_hash` clients: the `x5c` certificate chain must validate to one of `WalletConfig.verifierTrustAnchors` (signatures, validity periods and CA constraints). `validateTrustedVerifier` does not turn this off
 
 ```swift
 let authorizationRequest: AuthorizationRequest = try await openID4VP.authenticateVerifier(

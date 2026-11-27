@@ -1,6 +1,8 @@
 import Foundation
 import JSONWebKey
 
+private let kidHeaderParameter = "kid"
+
 class PreRegisteredSchemeAuthorizationRequestHandler:  ClientIdPrefixBasedAuthorizationRequestHandler {
     
     override init(clientId: String,
@@ -52,7 +54,8 @@ class PreRegisteredSchemeAuthorizationRequestHandler:  ClientIdPrefixBasedAuthor
         return true
     }
     
-    func extractPublicKey(keyId: String?, algorithm: String) async throws -> PublicKeyType {
+    func extractPublicKey(algorithm: String, jwsHeader: [String: Any]) async throws -> PublicKeyType {
+        let keyId = jwsHeader[kidHeaderParameter] as? String
         let preRegisteredClient = try verifier(clientId: super.clientId)
         if let jwksUri = preRegisteredClient.jwksUri {
             let jwkSet : JWKSet = try await resolveJwksFromUri(jwksUri, networkManager: self.networkManager, className: className)
